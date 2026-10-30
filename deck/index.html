@@ -1,0 +1,792 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Certificates of Trust · SIH26073</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@200;300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css">
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/contrib/auto-render.min.js"></script>
+<style>
+:root{
+  --bg0:#06090d; --bg1:#0B1015; --bg2:#111922; --copper:#D97736;
+  --amber:#F59E0B; --cyan:#38BDF8; --red:#FB7185; --green:#34D399; --violet:#A78BFA;
+  --ink:#F3F6FA; --ink2:#C9D3DF; --mute:#8A99AD; --line:rgba(255,255,255,.12);
+  --glass:rgba(18,24,32,.58);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:var(--bg0);color:var(--ink);font-family:Inter,system-ui,sans-serif;overflow:hidden;-webkit-font-smoothing:antialiased}
+
+/* ---------- stage ---------- */
+.stage{position:absolute;left:50%;top:50%;width:1920px;height:1080px;transform-origin:center;border-radius:28px;overflow:hidden;
+  box-shadow:0 0 0 1px rgba(255,255,255,.08),0 0 0 10px #0d1218,0 0 0 11px rgba(255,255,255,.05),0 40px 120px rgba(0,0,0,.7);
+  background:
+    radial-gradient(60% 55% at 82% 105%,rgba(217,119,54,.26),transparent 70%),
+    radial-gradient(40% 35% at 55% 110%,rgba(245,158,11,.12),transparent 70%),
+    radial-gradient(45% 40% at 8% -5%,rgba(56,189,248,.10),transparent 70%),
+    linear-gradient(180deg,var(--bg2),var(--bg1) 60%,#0d1116)}
+.clouds{position:absolute;inset:0;opacity:.55;pointer-events:none;mix-blend-mode:screen}
+.progress{position:absolute;left:0;top:0;height:3px;background:linear-gradient(90deg,var(--cyan),var(--amber));z-index:5;transition:width .6s cubic-bezier(.2,.7,.2,1);box-shadow:0 0 12px var(--amber)}
+
+.slide{position:absolute;inset:0;display:grid;grid-template-columns:372px 1fr;gap:28px;padding:44px 48px 44px 44px;opacity:0;visibility:hidden;transition:opacity .6s ease,visibility .6s}
+.slide.active{opacity:1;visibility:visible}
+
+/* ---------- glass ---------- */
+.glass{position:relative;background:var(--glass);backdrop-filter:blur(24px) saturate(1.2);-webkit-backdrop-filter:blur(24px) saturate(1.2);
+  border:1px solid var(--line);border-radius:22px;padding:22px 26px;overflow:hidden}
+.glass::before{content:"";position:absolute;inset:0 0 auto 0;height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.38),transparent)}
+.pill{display:inline-flex;align-items:center;gap:8px;border-radius:999px;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.06);
+  padding:6px 14px;font-size:14px;font-weight:500;color:var(--ink2);white-space:nowrap}
+.pill.amber{border-color:rgba(245,158,11,.45);color:#FCD38A;background:rgba(245,158,11,.10)}
+.pill.cyan{border-color:rgba(56,189,248,.45);color:#A5DEFB;background:rgba(56,189,248,.10)}
+.pill.red{border-color:rgba(251,113,133,.45);color:#FDB4C0;background:rgba(251,113,133,.10)}
+.pill.green{border-color:rgba(52,211,153,.45);color:#A7F0D3;background:rgba(52,211,153,.10)}
+.pill .dot{width:7px;height:7px;border-radius:50%;background:currentColor;box-shadow:0 0 10px currentColor}
+.micro{font-size:13px;font-weight:500;letter-spacing:.12em;text-transform:uppercase;color:var(--mute)}
+.mono{font-family:"JetBrains Mono",monospace}
+.amb{color:var(--amber)} .cy{color:var(--cyan)} .rd{color:var(--red)} .gn{color:var(--green)}
+p,li{font-size:19px;line-height:1.5;color:var(--ink2);font-weight:300}
+b,strong{font-weight:500;color:var(--ink)}
+
+/* ---------- dock ---------- */
+.dock{display:flex;flex-direction:column;gap:20px;padding:26px 26px 22px}
+.dock .pills{display:flex;flex-wrap:wrap;gap:8px}
+.dock-num{display:flex;align-items:baseline;gap:8px;margin-top:6px}
+.dock-num span{font-size:96px;font-weight:200;line-height:.9;letter-spacing:-.04em;background:linear-gradient(180deg,#fff,#9fb0c4);-webkit-background-clip:text;background-clip:text;color:transparent}
+.dock-num small{font-size:22px;font-weight:300;color:var(--mute)}
+.dock-title{font-size:26px;font-weight:300;line-height:1.2;margin-top:6px}
+.take{border-left:2px solid var(--amber);padding:2px 0 2px 14px;font-size:17px;line-height:1.5;color:var(--ink2);font-weight:300}
+.station{border-radius:16px;border:1px solid var(--line);background:rgba(255,255,255,.03);padding:14px 16px;display:grid;grid-template-columns:1fr auto;gap:4px 10px;align-items:center}
+.station .big{font-size:40px;font-weight:200;line-height:1}
+.station .big sup{font-size:18px;color:var(--mute)}
+.station .s{font-size:13px;color:var(--mute);line-height:1.5}
+.live{display:inline-flex;align-items:center;gap:7px;font-size:12px;letter-spacing:.1em;color:var(--green);font-weight:500}
+.live i{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 10px var(--green);animation:pulse 1.6s infinite}
+@keyframes pulse{50%{opacity:.25}}
+.rubric{margin-top:auto;display:flex;flex-direction:column;gap:9px}
+.rub{display:grid;grid-template-columns:1fr 44px;gap:4px 10px;font-size:14px;color:#5e6b7b;transition:color .4s}
+.rub .bar{grid-column:1/-1;height:4px;border-radius:4px;background:rgba(255,255,255,.06);overflow:hidden}
+.rub .bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--cyan),var(--amber));border-radius:4px;transition:width 1s cubic-bezier(.2,.7,.2,1) .3s}
+.rub.on{color:var(--ink)}
+.rub.on .w{color:var(--amber)}
+.rub .w{text-align:right;font-family:"JetBrains Mono",monospace;font-size:13px}
+.dots{display:flex;gap:6px}
+.dots b{flex:1;height:4px;border-radius:4px;background:rgba(255,255,255,.1);cursor:pointer}
+.dots b.on{background:var(--amber);box-shadow:0 0 8px var(--amber)}
+.dots b.done{background:rgba(245,158,11,.35)}
+
+/* ---------- canvas ---------- */
+.canvas{display:flex;flex-direction:column;gap:20px;min-width:0;min-height:0}
+.head{display:flex;align-items:flex-end;justify-content:space-between;gap:24px}
+.head .pills{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap}
+h2{font-size:50px;font-weight:200;letter-spacing:-.02em;line-height:1.08}
+h2 em,h1 em{font-style:normal;background:linear-gradient(90deg,#FCD38A,var(--amber) 50%,var(--copper));-webkit-background-clip:text;background-clip:text;color:transparent;font-weight:300}
+h3{font-size:22px;font-weight:400;letter-spacing:-.01em;margin-bottom:6px}
+.grid{display:grid;gap:20px;min-height:0}
+.fill{flex:1;min-height:0}
+.eq{font-size:25px;color:var(--ink);margin:10px 0}
+.eq.sm{font-size:21px}
+.eq.xs{font-size:18px}
+.eq.lg{font-size:30px}
+.katex{color:var(--ink)}
+.katex-display{margin:.3em 0}
+.note{font-size:16px;color:var(--mute);line-height:1.45;font-weight:400}
+.row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.kpi{border-radius:16px;border:1px solid var(--line);background:rgba(255,255,255,.035);padding:14px 16px}
+.kpi .v{font-size:40px;font-weight:200;letter-spacing:-.02em;line-height:1.05}
+.kpi .l{font-size:14px;color:var(--mute);margin-top:4px;line-height:1.35}
+.tag{font-family:"JetBrains Mono",monospace;font-size:14px;padding:3px 9px;border-radius:7px;font-weight:500;white-space:nowrap}
+.tag.rd{background:rgba(251,113,133,.14);color:#FDB4C0}
+.tag.amb{background:rgba(245,158,11,.14);color:#FCD38A}
+.tag.cy{background:rgba(56,189,248,.14);color:#A5DEFB}
+.tag.gn{background:rgba(52,211,153,.14);color:#A7F0D3}
+.tag.vi{background:rgba(167,139,250,.16);color:#D4C6FD}
+svg text{font-family:Inter,sans-serif}
+
+/* ---------- motion ---------- */
+.slide.active .glass{animation:rise .8s cubic-bezier(.2,.7,.2,1) both;animation-delay:calc(var(--i,0) * 90ms)}
+@keyframes rise{from{opacity:0;transform:translateY(22px) scale(.985)}to{opacity:1;transform:none}}
+.draw{stroke-dasharray:1;stroke-dashoffset:1}
+.slide.active .draw{animation:draw 2.2s cubic-bezier(.4,0,.2,1) forwards;animation-delay:var(--d,.4s)}
+@keyframes draw{to{stroke-dashoffset:0}}
+.pop{opacity:0}
+.slide.active .pop{animation:pop .6s cubic-bezier(.2,.9,.3,1.3) forwards;animation-delay:var(--d,1s)}
+@keyframes pop{from{opacity:0;transform:scale(.4)}to{opacity:1;transform:none}}
+.pop{transform-box:fill-box;transform-origin:center}
+.grow{transform:scaleX(0);transform-origin:left;transform-box:fill-box}
+.slide.active .grow{animation:grow 1.2s cubic-bezier(.2,.7,.2,1) forwards;animation-delay:var(--d,.5s)}
+@keyframes grow{to{transform:scaleX(1)}}
+.fade{opacity:0}
+.slide.active .fade{animation:fadein .7s ease forwards;animation-delay:var(--d,.6s)}
+@keyframes fadein{to{opacity:1}}
+.flow{stroke-dasharray:6 8;animation:flow 1.2s linear infinite}
+@keyframes flow{to{stroke-dashoffset:-28}}
+.glow-a{filter:drop-shadow(0 0 8px var(--amber))}
+.glow-c{filter:drop-shadow(0 0 8px var(--cyan))}
+.glow-r{filter:drop-shadow(0 0 8px var(--red))}
+
+/* ---------- nav ---------- */
+.nav{position:fixed;left:50%;bottom:14px;transform:translateX(-50%);display:flex;gap:10px;align-items:center;z-index:10;opacity:.25;transition:opacity .3s;font-size:13px;color:var(--mute)}
+.nav:hover{opacity:1}
+.nav button{background:rgba(255,255,255,.06);border:1px solid var(--line);color:var(--ink);border-radius:999px;width:34px;height:34px;cursor:pointer;font-size:16px}
+.nav button:focus-visible{outline:2px solid var(--amber)}
+
+/* ---------- slide specific ---------- */
+.hero{font-size:84px;font-weight:200;letter-spacing:-.035em;line-height:1.02}
+.lede{font-size:22px;max-width:980px;margin-top:14px}
+.attractor{position:relative;flex:1;min-height:0;border-radius:16px;overflow:hidden;
+  background:radial-gradient(50% 70% at 20% 55%,rgba(56,189,248,.10),transparent 70%),radial-gradient(30% 60% at 85% 55%,rgba(245,158,11,.10),transparent 70%)}
+.attractor img{width:100%;height:100%;object-fit:cover;object-position:50% 44%;filter:invert(1) hue-rotate(180deg) saturate(1.6) brightness(1.15) contrast(1.05);mix-blend-mode:screen;display:block}
+.slide.active .attractor img{animation:breathe 7s ease-in-out infinite alternate}
+@keyframes breathe{to{transform:scale(1.025)}}
+.panel3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.panel3 .kpi{display:flex;flex-direction:column;gap:6px}
+.fault{display:flex;flex-direction:column;justify-content:space-between;gap:8px}
+.fault .top{display:flex;justify-content:space-between;align-items:flex-start;gap:16px}
+.fault .eq{font-size:27px}
+.fault .ix{font-family:"JetBrains Mono",monospace;font-size:14px;color:var(--mute)}
+.fault svg{flex:0 0 330px;height:110px}
+.mass{display:grid;grid-template-columns:150px 1fr;gap:10px;align-items:center;font-size:15px;color:var(--ink2)}
+.mass .track{display:flex;height:32px;border-radius:8px;overflow:hidden;background:rgba(255,255,255,.05)}
+.mass .track span{display:flex;align-items:center;justify-content:center;font-family:"JetBrains Mono",monospace;font-size:12px;color:#0b1015;font-weight:500}
+.tier{display:grid;grid-template-columns:250px 1fr;gap:18px;align-items:center}
+.tier .lab .t{font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:var(--mute)}
+.tier .lab .n{font-size:24px;font-weight:300;line-height:1.15;margin:4px 0 8px}
+.nodes{display:flex;align-items:center;gap:0}
+.node{flex:1;border-radius:14px;border:1px solid var(--line);background:rgba(255,255,255,.04);padding:10px 12px;font-size:15px;line-height:1.3;color:var(--ink2);min-height:74px;display:flex;flex-direction:column;justify-content:center}
+.node b{font-size:16px;display:block;margin-bottom:2px}
+.node > span{display:block}
+.link{flex:1;position:relative;min-height:28px}
+.link i{position:absolute;top:4px;bottom:4px;width:2px;background:repeating-linear-gradient(0deg,var(--c) 0 7px,transparent 7px 14px);background-size:2px 14px;animation:up .7s linear infinite;box-shadow:0 0 8px var(--c)}
+.link i::before{content:"";position:absolute;top:-6px;left:-5px;border:6px solid transparent;border-bottom:8px solid var(--c);border-top:0}
+.link span{position:absolute;top:50%;transform:translateY(-50%);font-size:14px;color:var(--mute);white-space:nowrap;padding-left:14px}
+@keyframes up{to{background-position:0 -14px}}
+.node .katex{font-size:1em}
+.node.c{border-color:rgba(56,189,248,.35);background:rgba(56,189,248,.07)}
+.node.a{border-color:rgba(245,158,11,.4);background:rgba(245,158,11,.08)}
+.node.r{border-color:rgba(251,113,133,.55);background:rgba(251,113,133,.14);box-shadow:0 0 24px rgba(251,113,133,.25)}
+.arrow{width:28px;flex:0 0 28px;height:2px;background:linear-gradient(90deg,rgba(255,255,255,.1),rgba(255,255,255,.5));position:relative}
+.arrow::after{content:"";position:absolute;right:-1px;top:-4px;border:5px solid transparent;border-left:7px solid rgba(255,255,255,.6);border-right:0}
+.db{display:grid;grid-template-columns:230px 1fr 170px;align-items:center;gap:16px;padding:9px 0;border-bottom:1px solid rgba(255,255,255,.06)}
+.db:last-child{border:0}
+.db .name{font-size:17px;color:var(--ink)}
+.db .name small{display:block;font-size:12px;color:var(--mute);letter-spacing:.06em}
+.db .trk{position:relative;height:28px}
+.db .trk::before{content:"";position:absolute;left:0;right:0;top:13px;height:2px;background:rgba(255,255,255,.07);border-radius:2px}
+.db .seg{position:absolute;top:12px;height:4px;background:linear-gradient(90deg,rgba(138,153,173,.5),var(--amber));border-radius:4px}
+.db .p{position:absolute;top:6px;width:16px;height:16px;border-radius:50%;margin-left:-8px}
+.db .p.b{background:#5b6878;border:2px solid #8A99AD}
+.db .p.n{background:var(--amber);box-shadow:0 0 14px var(--amber)}
+.db .vals{font-family:"JetBrains Mono",monospace;font-size:15px;text-align:right;color:var(--mute)}
+.db .vals b{color:var(--amber);font-size:18px}
+table.log{width:100%;border-collapse:collapse;font-size:17px}
+table.log th{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--mute);font-weight:500;text-align:left;padding:0 10px 8px;border-bottom:1px solid var(--line)}
+table.log td{padding:13px 10px;border-bottom:1px solid rgba(255,255,255,.06);color:var(--ink2);vertical-align:middle}
+table.log tr:last-child td{border:0}
+table.log td.mono{font-size:14.5px;color:var(--ink)}
+table.log tr.protect td{background:rgba(52,211,153,.06)}
+.hm{display:grid;grid-template-columns:44px repeat(6,1fr);gap:5px;font-family:"JetBrains Mono",monospace;font-size:13px}
+.hm div{height:38px;border-radius:7px;display:flex;align-items:center;justify-content:center}
+.hm .h{color:var(--mute);height:24px}
+.hm .c{color:#e9eef5;border:1px solid transparent}
+.hm .c.hot{outline:2px solid var(--amber);outline-offset:-2px;box-shadow:0 0 16px rgba(245,158,11,.55);color:#fff;font-weight:500}
+
+@media print{
+  @page{size:1920px 1080px;margin:0}
+  html,body{overflow:visible;height:auto;background:var(--bg0)}
+  .stage{position:relative;left:0;top:0;transform:none!important;border-radius:0;box-shadow:none;width:1920px;height:auto;background:none;overflow:visible}
+  .clouds,.progress,.nav{display:none}
+  .slide{position:relative;opacity:1;visibility:visible;width:1920px;height:1080px;page-break-after:always;break-after:page;
+    background:radial-gradient(60% 55% at 82% 105%,rgba(217,119,54,.26),transparent 70%),linear-gradient(180deg,var(--bg2),var(--bg1))}
+  *{animation:none!important;transition:none!important}
+  .draw{stroke-dashoffset:0}.pop,.fade{opacity:1}.grow{transform:none}
+  .rub .bar i{transition:none}
+  .glass{backdrop-filter:none;-webkit-backdrop-filter:none;background:rgba(22,29,38,.92)}
+  *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+}
+</style>
+</head>
+<body>
+<div class="stage" id="stage">
+<svg class="clouds" width="1920" height="1080" aria-hidden="true">
+  <filter id="cl"><feTurbulence type="fractalNoise" baseFrequency=".0026 .006" numOctaves="5" seed="11"/>
+    <feColorMatrix values="0 0 0 0 .85  0 0 0 0 .55  0 0 0 0 .38  0 0 0 1.25 -.62"/></filter>
+  <linearGradient id="clm" x1="0" y1="0" x2="0" y2="1"><stop offset=".35" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#fff" stop-opacity=".9"/></linearGradient>
+  <mask id="clmask"><rect width="1920" height="1080" fill="url(#clm)"/></mask>
+  <rect width="1920" height="1080" filter="url(#cl)" mask="url(#clmask)" opacity=".5"/>
+</svg>
+<div class="progress" id="progress"></div>
+
+<!-- ================= 1 · HERO ================= -->
+<section class="slide" data-kicker="Problem" data-title="The Fundamental Paradox of Weather Telemetry" data-rubric="1,5"
+  data-take="A jammed gauge reporting 0&nbsp;mm during a cloudburst is <b>more dangerous than no gauge</b> — the flood model downstream trusts it.">
+<main class="canvas">
+  <div class="grid" style="grid-template-columns:1fr 330px;gap:20px">
+    <div>
+      <div class="row" style="margin-bottom:18px"><span class="pill amber"><span class="dot"></span>Problem 3.11 · SIH26073</span><span class="pill">Software Track</span><span class="pill cyan">Bengaluru · z ≈ 920 m</span><span class="pill">Δt = 15 min</span></div>
+      <h1 class="hero">Sensor fault —<br>or <em>extreme weather?</em></h1>
+      <p class="lede">For every 15-minute reading from Bengaluru's weather network, decide which one it is — and attach a <b>mathematical certificate</b> explaining why.</p>
+    </div>
+    <div class="glass" style="display:flex;flex-direction:column;justify-content:space-between;gap:10px;padding:20px 24px">
+      <div class="micro">Karnataka network (KSNDMC)</div>
+      <div><div style="font-size:54px;font-weight:200;line-height:1" data-count="6505">6,505</div><div class="note">Telemetric rain gauges</div></div>
+      <div><div style="font-size:54px;font-weight:200;line-height:1" data-count="935">935</div><div class="note">Telemetric weather stations</div></div>
+      <div><div style="font-size:54px;font-weight:200;line-height:1" class="rd" data-count="1530">1,530</div><div class="note">Defunct gauges flagged in audit</div></div>
+    </div>
+  </div>
+  <div class="grid" style="grid-template-columns:470px 1fr">
+    <div class="glass">
+      <div class="micro">State vector · sampled every Δt = 15 min</div>
+      <div class="eq">\[\mathbf{x}_t=[\,T_t,\;H_t,\;P_t,\;R_t,\;W_t\,]^{\top}\in\mathbb{R}^5\]</div>
+      <div class="note">Temperature · Humidity · Pressure · Rain · Wind</div>
+    </div>
+    <div class="glass">
+      <div class="micro">Signal decomposition — five things live inside every reading</div>
+      <div class="eq sm">\[x_{t,i}=\underbrace{\mu_{t,i}}_{\text{trend}}+\underbrace{\sum_{m=1}^{M}\!\Big[a_{i,m}\cos\tfrac{2\pi m t}{\tau_{\text{diurnal}}}+b_{i,m}\sin\tfrac{2\pi m t}{\tau_{\text{diurnal}}}\Big]}_{\text{diurnal harmonics}}+\underbrace{\cy{\eta_{t,i}}}_{\text{weather chaos}}+\underbrace{\epsilon_{t,i}}_{\text{noise}}+\underbrace{\rd{f_{t,i}}}_{\text{fault}}\]</div>
+    </div>
+  </div>
+  <div class="glass fill" style="display:flex;flex-direction:column;padding-bottom:12px">
+    <div class="row" style="justify-content:space-between">
+      <div class="micro">Why static 3σ rules fail · 72 h of Bengaluru temperature</div>
+      <div class="row" style="gap:18px;font-size:14px;color:var(--mute)">
+        <span><span class="cy">━</span> T<sub>t</sub> (°C)</span><span><span class="amb">┅</span> raw ±3σ band</span><span><span class="gn">●</span> real storm</span><span><span class="rd">●</span> hardware fault</span>
+      </div>
+    </div>
+    <svg viewBox="0 0 1360 325" style="width:100%;flex:1;min-height:0">
+      <defs>
+        <linearGradient id="tg" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#38BDF8" stop-opacity=".28"/><stop offset="1" stop-color="#38BDF8" stop-opacity="0"/></linearGradient>
+      </defs>
+      <g stroke="rgba(255,255,255,.07)"><line x1="461.5" x2="461.5" y1="8" y2="310" stroke-dasharray="3 5"/><line x1="903" x2="903" y1="8" y2="310" stroke-dasharray="3 5"/></g>
+      <g transform="scale(1 1.3)">
+        <path d="M20.0,168.3 L24.6,168.3 L29.2,168.3 L33.8,168.3 L38.4,168.3 L43.0,168.3 L47.6,168.3 L52.2,168.3 L56.8,168.8 L61.4,169.0 L66.0,168.7 L70.6,168.8 L75.2,169.3 L79.8,169.5 L84.4,169.6 L89.0,169.9 L93.6,170.2 L98.2,170.5 L102.8,170.8 L107.4,170.8 L112.0,170.8 L116.6,170.9 L121.2,170.7 L125.8,169.8 L130.4,169.0 L135.0,168.4 L139.6,167.0 L144.2,165.0 L148.8,163.5 L153.4,162.0 L158.0,159.5 L162.6,157.0 L167.2,155.0 L171.8,152.7 L176.4,149.7 L181.0,147.0 L185.6,144.6 L190.2,141.8 L194.8,138.6 L199.4,135.9 L204.0,133.3 L208.6,130.2 L213.2,127.1 L217.8,124.4 L222.4,121.6 L227.0,118.5 L231.6,115.6 L236.2,113.1 L240.8,110.4 L245.4,107.5 L250.0,104.9 L254.6,102.6 L259.2,100.1 L263.8,97.5 L268.4,95.4 L273.0,93.4 L277.6,91.1 L282.2,89.1 L286.8,87.4 L291.4,85.7 L296.0,84.0 L300.6,82.5 L305.2,81.3 L309.8,80.0 L314.4,78.7 L319.0,77.8 L323.6,77.0 L328.2,76.1 L332.8,75.4 L337.4,74.9 L342.0,74.5 L346.6,74.1 L351.1,73.9 L355.7,73.8 L360.3,73.7 L364.9,73.7 L369.5,73.8 L374.1,74.1 L378.7,74.3 L383.3,74.5 L387.9,74.9 L392.5,75.3 L397.1,75.7 L401.7,76.1 L406.3,76.5 L410.9,77.0 L415.5,77.4 L420.1,77.9 L424.7,78.3 L429.3,78.8 L433.9,79.2 L438.5,79.5 L443.1,79.9 L447.7,80.2 L452.3,80.5 L456.9,80.8 L461.5,81.0 L466.1,81.0 L470.7,81.0 L475.3,80.9 L479.9,80.9 L484.5,80.9 L489.1,80.8 L493.7,80.8 L498.3,80.8 L502.9,80.8 L507.5,80.7 L512.1,80.8 L516.7,80.8 L521.3,80.8 L525.9,80.7 L530.5,80.8 L535.1,80.8 L539.7,80.8 L544.3,80.8 L548.9,80.9 L553.5,80.9 L558.1,80.9 L562.7,80.9 L567.3,81.0 L571.9,81.0 L576.5,81.0 L581.1,81.1 L585.7,81.1 L590.3,81.1 L594.9,81.1 L599.5,81.2 L604.1,81.2 L608.7,81.2 L613.3,81.2 L617.9,81.2 L622.5,81.2 L627.1,81.2 L631.7,81.1 L636.3,81.1 L640.9,81.1 L645.5,81.0 L650.1,80.9 L654.7,80.9 L659.3,80.9 L663.9,80.8 L668.5,80.7 L673.1,80.7 L677.7,80.7 L682.3,80.6 L686.9,80.4 L691.5,80.4 L696.1,80.4 L700.7,80.3 L705.3,80.2 L709.9,80.3 L714.5,80.2 L719.1,80.1 L723.7,80.1 L728.3,80.2 L732.9,80.1 L737.5,80.0 L742.1,80.1 L746.7,80.2 L751.3,80.1 L755.9,80.1 L760.5,81.2 L765.1,82.1 L769.7,82.9 L774.3,83.7 L778.9,84.4 L783.5,85.0 L788.1,85.5 L792.7,86.0 L797.3,86.5 L801.9,86.8 L806.5,87.0 L811.1,87.3 L815.7,87.6 L820.3,87.7 L824.9,87.8 L829.5,88.0 L834.1,88.1 L838.7,88.2 L843.3,88.2 L847.9,88.3 L852.5,88.3 L857.1,88.4 L861.7,88.4 L866.3,88.4 L870.9,88.4 L875.5,88.4 L880.1,88.4 L884.7,88.3 L889.3,88.4 L893.9,88.3 L898.5,88.3 L903.1,88.3 L907.7,88.3 L912.3,88.2 L916.9,88.1 L921.5,88.2 L926.1,88.1 L930.7,88.1 L935.3,88.0 L939.9,88.1 L944.5,88.1 L949.1,88.0 L953.7,88.0 L958.3,88.1 L962.9,88.0 L967.5,88.0 L972.1,88.0 L976.7,88.1 L981.3,88.0 L985.9,88.0 L990.5,88.1 L995.1,88.2 L999.7,88.1 L1004.3,88.2 L1008.9,88.3 L1013.4,88.3 L1018.0,88.3 L1022.6,88.3 L1027.2,88.4 L1031.8,88.4 L1036.4,88.4 L1041.0,88.4 L1045.6,88.4 L1050.2,88.4 L1054.8,88.4 L1059.4,88.4 L1064.0,88.3 L1068.6,88.3 L1073.2,88.3 L1077.8,88.2 L1082.4,88.2 L1087.0,78.7 L1091.6,78.6 L1096.2,78.6 L1100.8,78.6 L1105.4,78.5 L1110.0,78.4 L1114.6,78.3 L1119.2,78.4 L1123.8,78.3 L1128.4,78.1 L1133.0,78.1 L1137.6,78.1 L1142.2,78.0 L1146.8,77.9 L1151.4,78.0 L1156.0,77.9 L1160.6,77.8 L1165.2,77.8 L1169.8,77.9 L1174.4,77.8 L1179.0,77.7 L1183.6,77.8 L1188.2,77.9 L1192.8,77.8 L1197.4,77.8 L1202.0,77.9 L1206.6,77.0 L1211.2,76.2 L1215.8,75.4 L1220.4,74.9 L1225.0,74.4 L1229.6,73.9 L1234.2,73.5 L1238.8,73.3 L1243.4,73.1 L1248.0,72.9 L1252.6,72.8 L1257.2,72.7 L1261.8,72.6 L1266.4,72.5 L1271.0,72.5 L1275.6,72.5 L1280.2,72.5 L1284.8,72.5 L1289.4,72.5 L1294.0,72.5 L1298.6,72.5 L1303.2,72.5 L1307.8,72.5 L1312.4,72.5 L1317.0,72.5 L1321.6,72.5 L1326.2,72.5 L1330.8,72.5 L1335.4,72.4 L1340.0,72.4 L1340.0,226.2 L1335.4,226.1 L1330.8,226.0 L1326.2,226.0 L1321.6,225.9 L1317.0,225.8 L1312.4,225.8 L1307.8,225.8 L1303.2,225.7 L1298.6,225.7 L1294.0,225.7 L1289.4,225.7 L1284.8,225.7 L1280.2,225.7 L1275.6,225.7 L1271.0,225.7 L1266.4,225.7 L1261.8,225.7 L1257.2,225.7 L1252.6,225.7 L1248.0,225.7 L1243.4,225.6 L1238.8,225.5 L1234.2,225.5 L1229.6,225.4 L1225.0,225.2 L1220.4,225.0 L1215.8,224.8 L1211.2,224.5 L1206.6,224.3 L1202.0,224.0 L1197.4,224.1 L1192.8,224.1 L1188.2,224.0 L1183.6,224.1 L1179.0,224.1 L1174.4,224.1 L1169.8,224.0 L1165.2,224.1 L1160.6,224.1 L1156.0,224.0 L1151.4,224.0 L1146.8,224.0 L1142.2,224.0 L1137.6,223.9 L1133.0,223.9 L1128.4,223.9 L1123.8,223.8 L1119.2,223.8 L1114.6,223.8 L1110.0,223.8 L1105.4,223.7 L1100.8,223.7 L1096.2,223.7 L1091.6,223.7 L1087.0,223.7 L1082.4,216.3 L1077.8,216.3 L1073.2,216.3 L1068.6,216.4 L1064.0,216.4 L1059.4,216.4 L1054.8,216.4 L1050.2,216.5 L1045.6,216.5 L1041.0,216.5 L1036.4,216.7 L1031.8,216.7 L1027.2,216.7 L1022.6,216.8 L1018.0,216.9 L1013.4,216.9 L1008.9,216.9 L1004.3,217.1 L999.7,217.1 L995.1,217.1 L990.5,217.1 L985.9,217.3 L981.3,217.3 L976.7,217.2 L972.1,217.3 L967.5,217.4 L962.9,217.3 L958.3,217.3 L953.7,217.4 L949.1,217.4 L944.5,217.3 L939.9,217.2 L935.3,217.3 L930.7,217.3 L926.1,217.1 L921.5,217.1 L916.9,217.1 L912.3,217.0 L907.7,216.9 L903.1,216.9 L898.5,216.9 L893.9,216.8 L889.3,216.7 L884.7,216.7 L880.1,216.6 L875.5,216.5 L870.9,216.5 L866.3,216.5 L861.7,216.4 L857.1,216.4 L852.5,216.3 L847.9,216.3 L843.3,216.3 L838.7,216.3 L834.1,216.3 L829.5,216.3 L824.9,216.3 L820.3,216.3 L815.7,216.4 L811.1,216.4 L806.5,216.6 L801.9,216.7 L797.3,216.8 L792.7,217.0 L788.1,217.3 L783.5,217.5 L778.9,217.7 L774.3,218.1 L769.7,218.5 L765.1,218.8 L760.5,219.1 L755.9,219.5 L751.3,219.4 L746.7,219.4 L742.1,219.5 L737.5,219.5 L732.9,219.4 L728.3,219.4 L723.7,219.5 L719.1,219.5 L714.5,219.4 L709.9,219.4 L705.3,219.4 L700.7,219.3 L696.1,219.3 L691.5,219.3 L686.9,219.3 L682.3,219.2 L677.7,219.1 L673.1,219.1 L668.5,219.1 L663.9,219.1 L659.3,219.1 L654.7,219.1 L650.1,219.0 L645.5,219.0 L640.9,219.0 L636.3,219.0 L631.7,219.1 L627.1,219.1 L622.5,219.1 L617.9,219.1 L613.3,219.2 L608.7,219.2 L604.1,219.2 L599.5,219.3 L594.9,219.4 L590.3,219.4 L585.7,219.4 L581.1,219.5 L576.5,219.7 L571.9,219.7 L567.3,219.7 L562.7,219.8 L558.1,219.9 L553.5,219.9 L548.9,219.9 L544.3,220.1 L539.7,220.1 L535.1,220.0 L530.5,220.1 L525.9,220.2 L521.3,220.1 L516.7,220.0 L512.1,220.1 L507.5,220.2 L502.9,220.1 L498.3,220.0 L493.7,220.1 L489.1,220.0 L484.5,219.9 L479.9,219.9 L475.3,219.9 L470.7,219.8 L466.1,219.7 L461.5,219.7 L456.9,219.4 L452.3,219.2 L447.7,219.1 L443.1,219.1 L438.5,219.0 L433.9,219.0 L429.3,219.2 L424.7,219.4 L420.1,219.5 L415.5,219.8 L410.9,220.2 L406.3,220.5 L401.7,220.9 L397.1,221.4 L392.5,221.8 L387.9,222.3 L383.3,222.8 L378.7,223.3 L374.1,223.9 L369.5,224.4 L364.9,224.9 L360.3,225.4 L355.7,225.8 L351.1,226.3 L346.6,226.7 L342.0,227.0 L337.4,227.4 L332.8,227.7 L328.2,227.9 L323.6,228.0 L319.0,228.1 L314.4,228.2 L309.8,228.1 L305.2,228.0 L300.6,227.9 L296.0,227.6 L291.4,227.2 L286.8,226.8 L282.2,226.4 L277.6,225.8 L273.0,225.1 L268.4,224.4 L263.8,223.7 L259.2,222.8 L254.6,221.8 L250.0,220.9 L245.4,219.9 L240.8,218.6 L236.2,217.5 L231.6,216.4 L227.0,215.1 L222.4,213.6 L217.8,212.4 L213.2,211.2 L208.6,209.6 L204.0,208.0 L199.4,206.8 L194.8,205.4 L190.2,203.7 L185.6,202.2 L181.0,201.1 L176.4,199.6 L171.8,197.9 L167.2,196.7 L162.6,195.7 L158.0,194.3 L153.4,192.8 L148.8,192.1 L144.2,191.3 L139.6,190.2 L135.0,189.5 L130.4,189.3 L125.8,189.1 L121.2,188.7 L116.6,188.8 L112.0,189.0 L107.4,189.2 L102.8,189.5 L98.2,189.6 L93.6,189.7 L89.0,189.9 L84.4,190.1 L79.8,189.6 L75.2,189.3 L70.6,189.4 L66.0,188.9 L61.4,187.5 L56.8,187.0 L52.2,186.8 L47.6,186.8 L43.0,186.8 L38.4,186.8 L33.8,186.8 L29.2,186.8 L24.6,186.8 L20.0,186.8 Z" fill="rgba(245,158,11,.07)" class="fade" style="--d:1.6s"/>
+        <path d="M20.0,168.3 L24.6,168.3 L29.2,168.3 L33.8,168.3 L38.4,168.3 L43.0,168.3 L47.6,168.3 L52.2,168.3 L56.8,168.8 L61.4,169.0 L66.0,168.7 L70.6,168.8 L75.2,169.3 L79.8,169.5 L84.4,169.6 L89.0,169.9 L93.6,170.2 L98.2,170.5 L102.8,170.8 L107.4,170.8 L112.0,170.8 L116.6,170.9 L121.2,170.7 L125.8,169.8 L130.4,169.0 L135.0,168.4 L139.6,167.0 L144.2,165.0 L148.8,163.5 L153.4,162.0 L158.0,159.5 L162.6,157.0 L167.2,155.0 L171.8,152.7 L176.4,149.7 L181.0,147.0 L185.6,144.6 L190.2,141.8 L194.8,138.6 L199.4,135.9 L204.0,133.3 L208.6,130.2 L213.2,127.1 L217.8,124.4 L222.4,121.6 L227.0,118.5 L231.6,115.6 L236.2,113.1 L240.8,110.4 L245.4,107.5 L250.0,104.9 L254.6,102.6 L259.2,100.1 L263.8,97.5 L268.4,95.4 L273.0,93.4 L277.6,91.1 L282.2,89.1 L286.8,87.4 L291.4,85.7 L296.0,84.0 L300.6,82.5 L305.2,81.3 L309.8,80.0 L314.4,78.7 L319.0,77.8 L323.6,77.0 L328.2,76.1 L332.8,75.4 L337.4,74.9 L342.0,74.5 L346.6,74.1 L351.1,73.9 L355.7,73.8 L360.3,73.7 L364.9,73.7 L369.5,73.8 L374.1,74.1 L378.7,74.3 L383.3,74.5 L387.9,74.9 L392.5,75.3 L397.1,75.7 L401.7,76.1 L406.3,76.5 L410.9,77.0 L415.5,77.4 L420.1,77.9 L424.7,78.3 L429.3,78.8 L433.9,79.2 L438.5,79.5 L443.1,79.9 L447.7,80.2 L452.3,80.5 L456.9,80.8 L461.5,81.0 L466.1,81.0 L470.7,81.0 L475.3,80.9 L479.9,80.9 L484.5,80.9 L489.1,80.8 L493.7,80.8 L498.3,80.8 L502.9,80.8 L507.5,80.7 L512.1,80.8 L516.7,80.8 L521.3,80.8 L525.9,80.7 L530.5,80.8 L535.1,80.8 L539.7,80.8 L544.3,80.8 L548.9,80.9 L553.5,80.9 L558.1,80.9 L562.7,80.9 L567.3,81.0 L571.9,81.0 L576.5,81.0 L581.1,81.1 L585.7,81.1 L590.3,81.1 L594.9,81.1 L599.5,81.2 L604.1,81.2 L608.7,81.2 L613.3,81.2 L617.9,81.2 L622.5,81.2 L627.1,81.2 L631.7,81.1 L636.3,81.1 L640.9,81.1 L645.5,81.0 L650.1,80.9 L654.7,80.9 L659.3,80.9 L663.9,80.8 L668.5,80.7 L673.1,80.7 L677.7,80.7 L682.3,80.6 L686.9,80.4 L691.5,80.4 L696.1,80.4 L700.7,80.3 L705.3,80.2 L709.9,80.3 L714.5,80.2 L719.1,80.1 L723.7,80.1 L728.3,80.2 L732.9,80.1 L737.5,80.0 L742.1,80.1 L746.7,80.2 L751.3,80.1 L755.9,80.1 L760.5,81.2 L765.1,82.1 L769.7,82.9 L774.3,83.7 L778.9,84.4 L783.5,85.0 L788.1,85.5 L792.7,86.0 L797.3,86.5 L801.9,86.8 L806.5,87.0 L811.1,87.3 L815.7,87.6 L820.3,87.7 L824.9,87.8 L829.5,88.0 L834.1,88.1 L838.7,88.2 L843.3,88.2 L847.9,88.3 L852.5,88.3 L857.1,88.4 L861.7,88.4 L866.3,88.4 L870.9,88.4 L875.5,88.4 L880.1,88.4 L884.7,88.3 L889.3,88.4 L893.9,88.3 L898.5,88.3 L903.1,88.3 L907.7,88.3 L912.3,88.2 L916.9,88.1 L921.5,88.2 L926.1,88.1 L930.7,88.1 L935.3,88.0 L939.9,88.1 L944.5,88.1 L949.1,88.0 L953.7,88.0 L958.3,88.1 L962.9,88.0 L967.5,88.0 L972.1,88.0 L976.7,88.1 L981.3,88.0 L985.9,88.0 L990.5,88.1 L995.1,88.2 L999.7,88.1 L1004.3,88.2 L1008.9,88.3 L1013.4,88.3 L1018.0,88.3 L1022.6,88.3 L1027.2,88.4 L1031.8,88.4 L1036.4,88.4 L1041.0,88.4 L1045.6,88.4 L1050.2,88.4 L1054.8,88.4 L1059.4,88.4 L1064.0,88.3 L1068.6,88.3 L1073.2,88.3 L1077.8,88.2 L1082.4,88.2 L1087.0,78.7 L1091.6,78.6 L1096.2,78.6 L1100.8,78.6 L1105.4,78.5 L1110.0,78.4 L1114.6,78.3 L1119.2,78.4 L1123.8,78.3 L1128.4,78.1 L1133.0,78.1 L1137.6,78.1 L1142.2,78.0 L1146.8,77.9 L1151.4,78.0 L1156.0,77.9 L1160.6,77.8 L1165.2,77.8 L1169.8,77.9 L1174.4,77.8 L1179.0,77.7 L1183.6,77.8 L1188.2,77.9 L1192.8,77.8 L1197.4,77.8 L1202.0,77.9 L1206.6,77.0 L1211.2,76.2 L1215.8,75.4 L1220.4,74.9 L1225.0,74.4 L1229.6,73.9 L1234.2,73.5 L1238.8,73.3 L1243.4,73.1 L1248.0,72.9 L1252.6,72.8 L1257.2,72.7 L1261.8,72.6 L1266.4,72.5 L1271.0,72.5 L1275.6,72.5 L1280.2,72.5 L1284.8,72.5 L1289.4,72.5 L1294.0,72.5 L1298.6,72.5 L1303.2,72.5 L1307.8,72.5 L1312.4,72.5 L1317.0,72.5 L1321.6,72.5 L1326.2,72.5 L1330.8,72.5 L1335.4,72.4 L1340.0,72.4" fill="none" stroke="#F59E0B" stroke-width="1.6" stroke-dasharray="5 6" vector-effect="non-scaling-stroke" opacity=".8" class="fade" style="--d:1.6s"/>
+        <g class="fade" style="--d:1.9s"><rect x="755.9" y="213.7" width="6" height="24.3" rx="2" fill="#38BDF8" opacity=".55"/><rect x="765.1" y="200.5" width="6" height="37.5" rx="2" fill="#38BDF8" opacity=".55"/><rect x="774.3" y="192.0" width="6" height="46.0" rx="2" fill="#38BDF8" opacity=".55"/><rect x="783.5" y="193.1" width="6" height="44.9" rx="2" fill="#38BDF8" opacity=".55"/><rect x="792.7" y="203.0" width="6" height="35.0" rx="2" fill="#38BDF8" opacity=".55"/><rect x="801.9" y="216.3" width="6" height="21.7" rx="2" fill="#38BDF8" opacity=".55"/><rect x="811.1" y="227.3" width="6" height="10.7" rx="2" fill="#38BDF8" opacity=".55"/><rect x="820.3" y="233.8" width="6" height="4.2" rx="2" fill="#38BDF8" opacity=".55"/><rect x="829.5" y="236.7" width="6" height="1.3" rx="2" fill="#38BDF8" opacity=".55"/><rect x="838.7" y="237.7" width="6" height="0.3" rx="2" fill="#38BDF8" opacity=".55"/><rect x="847.9" y="237.9" width="6" height="0.1" rx="2" fill="#38BDF8" opacity=".55"/><rect x="857.1" y="238.0" width="6" height="0.0" rx="2" fill="#38BDF8" opacity=".55"/></g>
+        <path d="M20.0,173.2 L24.6,173.1 L29.2,176.4 L33.8,178.7 L38.4,177.6 L43.0,178.1 L47.6,181.4 L52.2,182.0 L56.8,180.3 L61.4,181.5 L66.0,184.0 L70.6,182.9 L75.2,181.2 L79.8,182.9 L84.4,184.0 L89.0,181.6 L93.6,180.3 L98.2,181.9 L102.8,181.4 L107.4,178.2 L112.0,177.6 L116.6,178.7 L121.2,176.5 L125.8,173.1 L130.4,173.1 L135.0,173.2 L139.6,169.6 L144.2,166.8 L148.8,167.2 L153.4,165.8 L158.0,161.6 L162.6,159.6 L167.2,159.9 L171.8,157.2 L176.4,152.9 L181.0,151.9 L185.6,151.7 L190.2,147.9 L194.8,144.3 L199.4,144.2 L204.0,143.1 L208.6,138.8 L213.2,136.4 L217.8,136.8 L222.4,134.7 L227.0,130.6 L231.6,129.7 L236.2,130.1 L240.8,127.2 L245.4,124.0 L250.0,124.5 L254.6,124.5 L259.2,121.2 L263.8,119.5 L268.4,121.0 L273.0,120.3 L277.6,117.3 L282.2,117.4 L286.8,119.2 L291.4,117.9 L296.0,115.9 L300.6,117.6 L305.2,119.3 L309.8,117.7 L314.4,117.1 L319.0,120.0 L323.6,121.2 L328.2,119.7 L332.8,120.9 L337.4,124.3 L342.0,124.8 L346.6,124.0 L351.1,126.8 L355.7,130.2 L360.3,130.0 L364.9,130.5 L369.5,134.4 L374.1,137.0 L378.7,136.7 L383.3,138.5 L387.9,142.9 L392.5,144.5 L397.1,144.4 L401.7,147.6 L406.3,151.7 L410.9,152.3 L415.5,152.8 L420.1,156.9 L424.7,160.0 L429.3,159.8 L433.9,161.3 L438.5,165.6 L443.1,167.4 L447.7,166.9 L452.3,169.3 L456.9,173.1 L461.5,173.4 L466.1,173.1 L470.7,176.2 L475.3,178.8 L479.9,177.8 L484.5,178.0 L489.1,181.2 L493.7,182.2 L498.3,180.4 L502.9,181.3 L507.5,183.9 L512.1,183.2 L516.7,181.2 L521.3,182.6 L525.9,184.0 L530.5,181.8 L535.1,180.2 L539.7,181.7 L544.3,181.6 L548.9,178.4 L553.5,177.3 L558.1,178.6 L562.7,176.7 L567.3,173.2 L571.9,172.9 L576.5,173.2 L581.1,169.9 L585.7,166.7 L590.3,166.9 L594.9,166.0 L599.5,161.8 L604.1,159.4 L608.7,159.7 L613.3,157.4 L617.9,153.0 L622.5,151.7 L627.1,151.6 L631.7,148.1 L636.3,144.3 L640.9,144.0 L645.5,143.2 L650.1,139.0 L654.7,136.3 L659.3,136.7 L663.9,134.9 L668.5,130.7 L673.1,129.5 L677.7,130.0 L682.3,127.4 L686.9,124.0 L691.5,124.2 L696.1,124.5 L700.7,121.4 L705.3,119.4 L709.9,120.7 L714.5,120.4 L719.1,117.5 L723.7,117.1 L728.3,119.1 L732.9,118.1 L737.5,116.0 L742.1,117.3 L746.7,119.3 L751.3,117.9 L755.9,117.1 L760.5,152.0 L765.1,148.9 L769.7,143.5 L774.3,140.9 L778.9,141.4 L783.5,139.8 L788.1,136.7 L792.7,137.4 L797.3,139.4 L801.9,138.2 L806.5,137.2 L811.1,139.9 L815.7,142.1 L820.3,141.1 L824.9,142.0 L829.5,145.8 L834.1,147.4 L838.7,146.8 L843.3,149.3 L847.9,153.3 L852.5,153.9 L857.1,154.0 L861.7,157.6 L866.3,160.1 L870.9,160.1 L875.5,161.2 L880.1,165.4 L884.7,167.6 L889.3,167.1 L893.9,169.1 L898.5,173.0 L903.1,173.7 L907.7,173.1 L912.3,175.9 L916.9,178.8 L921.5,178.1 L926.1,177.9 L930.7,181.0 L935.3,182.3 L939.9,180.6 L944.5,181.1 L949.1,183.8 L953.7,183.4 L958.3,181.3 L962.9,182.3 L967.5,184.0 L972.1,182.1 L976.7,180.1 L981.3,181.5 L985.9,181.7 L990.5,178.6 L995.1,177.2 L999.7,178.4 L1004.3,176.9 L1008.9,173.3 L1013.4,172.6 L1018.0,173.2 L1022.6,170.2 L1027.2,166.7 L1031.8,166.7 L1036.4,166.1 L1041.0,162.0 L1045.6,159.3 L1050.2,159.5 L1054.8,157.6 L1059.4,153.1 L1064.0,151.5 L1068.6,151.6 L1073.2,148.4 L1077.8,144.3 L1082.4,143.7 L1087.0,40.2 L1091.6,139.2 L1096.2,136.2 L1100.8,136.4 L1105.4,135.0 L1110.0,130.9 L1114.6,129.3 L1119.2,129.9 L1123.8,127.6 L1128.4,124.1 L1133.0,124.0 L1137.6,124.5 L1142.2,121.7 L1146.8,119.3 L1151.4,120.5 L1156.0,120.6 L1160.6,117.7 L1165.2,117.0 L1169.8,119.0 L1174.4,118.4 L1179.0,116.0 L1183.6,117.1 L1188.2,119.3 L1192.8,118.2 L1197.4,117.0 L1202.0,119.5 L1206.6,121.4 L1211.2,120.1 L1215.8,120.6 L1220.4,124.0 L1225.0,125.2 L1229.6,124.3 L1234.2,126.3 L1238.8,130.1 L1243.4,130.5 L1248.0,130.4 L1252.6,133.9 L1257.2,137.2 L1261.8,137.1 L1266.4,138.2 L1271.0,142.5 L1275.6,144.9 L1280.2,144.7 L1284.8,147.1 L1289.4,151.5 L1294.0,152.8 L1298.6,152.8 L1303.2,156.4 L1307.8,160.1 L1312.4,160.3 L1317.0,161.1 L1321.6,165.2 L1326.2,167.8 L1330.8,167.2 L1335.4,168.9 L1340.0,172.9 L1340,250 L20,250 Z" fill="url(#tg)" class="fade" style="--d:1.2s"/>
+        <path d="M20.0,173.2 L24.6,173.1 L29.2,176.4 L33.8,178.7 L38.4,177.6 L43.0,178.1 L47.6,181.4 L52.2,182.0 L56.8,180.3 L61.4,181.5 L66.0,184.0 L70.6,182.9 L75.2,181.2 L79.8,182.9 L84.4,184.0 L89.0,181.6 L93.6,180.3 L98.2,181.9 L102.8,181.4 L107.4,178.2 L112.0,177.6 L116.6,178.7 L121.2,176.5 L125.8,173.1 L130.4,173.1 L135.0,173.2 L139.6,169.6 L144.2,166.8 L148.8,167.2 L153.4,165.8 L158.0,161.6 L162.6,159.6 L167.2,159.9 L171.8,157.2 L176.4,152.9 L181.0,151.9 L185.6,151.7 L190.2,147.9 L194.8,144.3 L199.4,144.2 L204.0,143.1 L208.6,138.8 L213.2,136.4 L217.8,136.8 L222.4,134.7 L227.0,130.6 L231.6,129.7 L236.2,130.1 L240.8,127.2 L245.4,124.0 L250.0,124.5 L254.6,124.5 L259.2,121.2 L263.8,119.5 L268.4,121.0 L273.0,120.3 L277.6,117.3 L282.2,117.4 L286.8,119.2 L291.4,117.9 L296.0,115.9 L300.6,117.6 L305.2,119.3 L309.8,117.7 L314.4,117.1 L319.0,120.0 L323.6,121.2 L328.2,119.7 L332.8,120.9 L337.4,124.3 L342.0,124.8 L346.6,124.0 L351.1,126.8 L355.7,130.2 L360.3,130.0 L364.9,130.5 L369.5,134.4 L374.1,137.0 L378.7,136.7 L383.3,138.5 L387.9,142.9 L392.5,144.5 L397.1,144.4 L401.7,147.6 L406.3,151.7 L410.9,152.3 L415.5,152.8 L420.1,156.9 L424.7,160.0 L429.3,159.8 L433.9,161.3 L438.5,165.6 L443.1,167.4 L447.7,166.9 L452.3,169.3 L456.9,173.1 L461.5,173.4 L466.1,173.1 L470.7,176.2 L475.3,178.8 L479.9,177.8 L484.5,178.0 L489.1,181.2 L493.7,182.2 L498.3,180.4 L502.9,181.3 L507.5,183.9 L512.1,183.2 L516.7,181.2 L521.3,182.6 L525.9,184.0 L530.5,181.8 L535.1,180.2 L539.7,181.7 L544.3,181.6 L548.9,178.4 L553.5,177.3 L558.1,178.6 L562.7,176.7 L567.3,173.2 L571.9,172.9 L576.5,173.2 L581.1,169.9 L585.7,166.7 L590.3,166.9 L594.9,166.0 L599.5,161.8 L604.1,159.4 L608.7,159.7 L613.3,157.4 L617.9,153.0 L622.5,151.7 L627.1,151.6 L631.7,148.1 L636.3,144.3 L640.9,144.0 L645.5,143.2 L650.1,139.0 L654.7,136.3 L659.3,136.7 L663.9,134.9 L668.5,130.7 L673.1,129.5 L677.7,130.0 L682.3,127.4 L686.9,124.0 L691.5,124.2 L696.1,124.5 L700.7,121.4 L705.3,119.4 L709.9,120.7 L714.5,120.4 L719.1,117.5 L723.7,117.1 L728.3,119.1 L732.9,118.1 L737.5,116.0 L742.1,117.3 L746.7,119.3 L751.3,117.9 L755.9,117.1 L760.5,152.0 L765.1,148.9 L769.7,143.5 L774.3,140.9 L778.9,141.4 L783.5,139.8 L788.1,136.7 L792.7,137.4 L797.3,139.4 L801.9,138.2 L806.5,137.2 L811.1,139.9 L815.7,142.1 L820.3,141.1 L824.9,142.0 L829.5,145.8 L834.1,147.4 L838.7,146.8 L843.3,149.3 L847.9,153.3 L852.5,153.9 L857.1,154.0 L861.7,157.6 L866.3,160.1 L870.9,160.1 L875.5,161.2 L880.1,165.4 L884.7,167.6 L889.3,167.1 L893.9,169.1 L898.5,173.0 L903.1,173.7 L907.7,173.1 L912.3,175.9 L916.9,178.8 L921.5,178.1 L926.1,177.9 L930.7,181.0 L935.3,182.3 L939.9,180.6 L944.5,181.1 L949.1,183.8 L953.7,183.4 L958.3,181.3 L962.9,182.3 L967.5,184.0 L972.1,182.1 L976.7,180.1 L981.3,181.5 L985.9,181.7 L990.5,178.6 L995.1,177.2 L999.7,178.4 L1004.3,176.9 L1008.9,173.3 L1013.4,172.6 L1018.0,173.2 L1022.6,170.2 L1027.2,166.7 L1031.8,166.7 L1036.4,166.1 L1041.0,162.0 L1045.6,159.3 L1050.2,159.5 L1054.8,157.6 L1059.4,153.1 L1064.0,151.5 L1068.6,151.6 L1073.2,148.4 L1077.8,144.3 L1082.4,143.7 L1087.0,40.2 L1091.6,139.2 L1096.2,136.2 L1100.8,136.4 L1105.4,135.0 L1110.0,130.9 L1114.6,129.3 L1119.2,129.9 L1123.8,127.6 L1128.4,124.1 L1133.0,124.0 L1137.6,124.5 L1142.2,121.7 L1146.8,119.3 L1151.4,120.5 L1156.0,120.6 L1160.6,117.7 L1165.2,117.0 L1169.8,119.0 L1174.4,118.4 L1179.0,116.0 L1183.6,117.1 L1188.2,119.3 L1192.8,118.2 L1197.4,117.0 L1202.0,119.5 L1206.6,121.4 L1211.2,120.1 L1215.8,120.6 L1220.4,124.0 L1225.0,125.2 L1229.6,124.3 L1234.2,126.3 L1238.8,130.1 L1243.4,130.5 L1248.0,130.4 L1252.6,133.9 L1257.2,137.2 L1261.8,137.1 L1266.4,138.2 L1271.0,142.5 L1275.6,144.9 L1280.2,144.7 L1284.8,147.1 L1289.4,151.5 L1294.0,152.8 L1298.6,152.8 L1303.2,156.4 L1307.8,160.1 L1312.4,160.3 L1317.0,161.1 L1321.6,165.2 L1326.2,167.8 L1330.8,167.2 L1335.4,168.9 L1340.0,172.9" fill="none" stroke="#38BDF8" stroke-width="2.6" vector-effect="non-scaling-stroke" pathLength="1" class="draw glow-c" style="--d:.3s"/>
+      </g>
+      <circle cx="774.3" cy="183.2" r="7" fill="#34D399" class="pop" style="--d:2.2s;filter:drop-shadow(0 0 10px #34D399)"/>
+      <circle cx="1087" cy="52.3" r="7" fill="#FB7185" class="pop glow-r" style="--d:2.4s"/>
+      <g font-size="15" class="fade" style="--d:2.6s">
+        <text x="1072" y="22" fill="#FDB4C0" text-anchor="end">ADC spike +16 °C (one sample) → σ explodes, the ±3σ band balloons</text>
+        <text x="1072" y="42" fill="#8A99AD" text-anchor="end">and masks every fault for the next 24 h — mean &amp; σ have a 0% breakdown point</text>
+        <text x="845" y="266" fill="#A7F0D3">Real cloudburst: rain &gt; 6σ, T drops 6 °C</text>
+        <text x="845" y="286" fill="#8A99AD">a univariate 3σ rule on R deletes it</text>
+        <text x="32" y="292" fill="#FCD38A">Diurnal blindness: the 24 h cycle inflates σ → bands too wide to catch faults</text>
+      </g>
+      <g font-size="13" fill="#5e6b7b"><text x="240" y="320">Day 1</text><text x="682" y="320">Day 2</text><text x="1124" y="320">Day 3</text></g>
+    </svg>
+  </div>
+</main>
+</section>
+
+<!-- ================= 2 · TAXONOMY ================= -->
+<section class="slide" data-kicker="Formulation" data-title="Canonical Taxonomy of Sensor Faults" data-rubric="2,1"
+  data-take="Every flag maps to <b>exactly one equation</b>. No black box — each alarm is auditable by an engineer with a calculator.">
+<main class="canvas">
+  <div class="head"><div><div class="pills"><span class="pill amber">Fault term \(f_{t,i}\neq0\)</span><span class="pill">Raw data never deleted</span></div>
+    <h2>Four faults. Four equations. <em>Zero ambiguity.</em></h2></div></div>
+  <div class="grid fill" style="grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr">
+    <div class="glass fault">
+      <div class="top"><div><div class="ix">F1 · POINT / SPIKE</div><h3>ADC surge · GPRS bit-flip</h3></div>
+      <svg viewBox="0 0 250 90" preserveAspectRatio="none"><path d="M0,52 C30,40 55,40 85,48 S125,58 145,50 L152,46 L158,6 L164,50 C185,56 215,42 250,48" fill="none" stroke="#38BDF8" stroke-width="2.4" pathLength="1" class="draw"/><circle cx="158" cy="6" r="5" fill="#FB7185" class="pop glow-r" style="--d:1.6s"/></svg></div>
+      <div><div class="eq">\[f_{t,i}=\delta\cdot\mathbb{I}(t=t_0),\quad |\delta|\gg 3.5\,\sigma_{e,i}\]</div>
+      <div class="row"><span class="tag rd">TEMPORAL_SPIKE</span><span class="note">Modified Z (MAD) &gt; 3.5</span></div></div>
+    </div>
+    <div class="glass fault">
+      <div class="top"><div><div class="ix">F2 · MECHANICAL FLATLINE</div><h3>Clogged bucket · seized anemometer</h3></div>
+      <svg viewBox="0 0 250 90" preserveAspectRatio="none"><path d="M0,66 C25,40 55,22 90,34 L104,40" fill="none" stroke="#38BDF8" stroke-width="2.4" pathLength="1" class="draw"/><path d="M104,40 L250,40" fill="none" stroke="#F59E0B" stroke-width="3" pathLength="1" class="draw glow-a" style="--d:1.2s"/><path d="M104,40 C140,60 170,78 200,56 S240,28 250,30" fill="none" stroke="#38BDF8" stroke-width="1.4" stroke-dasharray="3 4" opacity=".45"/></svg></div>
+      <div><div class="eq sm">\[x_{t,i}=c\quad\forall t\in[t_0,\,t_0{+}k]\]\[\Rightarrow\; s^2_{t,i}(k)=\tfrac{1}{k-1}\sum_{j=0}^{k-1}(x_{t-j,i}-\bar x_i)^2<10^{-6}\]</div>
+      <div class="row"><span class="tag amb">FLATLINE_FAULT</span><span class="note">k = 6 rolling variance</span></div></div>
+    </div>
+    <div class="glass fault">
+      <div class="top"><div><div class="ix">F3 · CALIBRATION DRIFT</div><h3>Polymer ageing · shield fouling</h3></div>
+      <svg viewBox="0 0 250 90" preserveAspectRatio="none"><path d="M0,58 C40,40 80,66 120,52 S200,40 250,52" fill="none" stroke="#38BDF8" stroke-width="1.6" stroke-dasharray="4 5" opacity=".6"/><path d="M0,58 C40,40 80,64 120,46 S200,12 250,10" fill="none" stroke="#A78BFA" stroke-width="2.6" pathLength="1" class="draw" style="filter:drop-shadow(0 0 6px #A78BFA)"/></svg></div>
+      <div><div class="eq">\[f_{t,i}=\alpha\,(t-t_0)\,\mathbb{I}(t\ge t_0),\quad \alpha\neq 0\]</div>
+      <div class="row"><span class="tag vi">CALIBRATION_DRIFT</span><span class="note">two-sided CUSUM C<sup>±</sup> &gt; 5</span></div></div>
+    </div>
+    <div class="glass fault">
+      <div class="top"><div><div class="ix">F4 · MULTIVARIATE INCONSISTENCY</div><h3>Each channel valid — together impossible</h3></div>
+      <svg viewBox="0 0 250 90" preserveAspectRatio="none"><g fill="#38BDF8" opacity=".85"><rect x="40" y="62" width="16" height="22" rx="3" class="fade" style="--d:.6s"/><rect x="70" y="46" width="16" height="38" rx="3" class="fade" style="--d:.75s"/><rect x="100" y="26" width="16" height="58" rx="3" class="fade" style="--d:.9s"/><rect x="130" y="10" width="16" height="74" rx="3" class="fade" style="--d:1.05s"/></g><path d="M30,20 C80,26 120,50 200,74" fill="none" stroke="#F59E0B" stroke-width="2.6" pathLength="1" class="draw"/><text x="160" y="22" fill="#A5DEFB" font-size="13">R ↑ 38 mm/h</text><text x="180" y="62" fill="#FCD38A" font-size="13">H ↓ 28%</text></svg></div>
+      <div><div class="eq sm">\[x_{t,i}\in[L_{\min,i},\,L_{\max,i}]\quad\forall i\]\[\text{but}\quad\mathbf{e}_t\notin\text{thermodynamic covariance}\]</div>
+      <div class="row"><span class="tag cy">MULTIVARIATE_INCONSISTENCY</span><span class="note">e.g. R = 38 mm/hr while H = 28%</span></div></div>
+    </div>
+  </div>
+  <div class="glass" style="display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:30px;padding:16px 28px">
+    <div class="micro" style="line-height:1.5">Constrained<br>objective</div>
+    <div class="eq" style="margin:0">\[\max_{\boldsymbol\theta}\;F_1(\boldsymbol\theta)=\frac{2\,\mathrm{TP}}{2\,\mathrm{TP}+\mathrm{FP}+\mathrm{FN}}\quad\text{s.t.}\quad \amb{\mathrm{FPR}(\boldsymbol\theta)\le\alpha_{\max}},\;\; \cy{\mathbb{E}[\Delta t]\le\Delta t_{\max}}\]</div>
+    <div class="note mono" style="font-size:14px;line-height:1.6">θ = {τ<sub>MAD</sub>, h<sub>CUSUM</sub>,<br>τ<sub>χ²</sub>, τ<sub>DST</sub>}</div>
+  </div>
+</main>
+</section>
+
+<!-- ================= 3 · TAKENS ================= -->
+<section class="slide" data-kicker="Pioneer Math I" data-title="Poincaré · Lyapunov · Takens" data-rubric="2,3"
+  data-take="Weather is <b>deterministic chaos</b>; sensor faults are not. Rebuilding the hidden attractor from one sensor tells them apart — no labelled faults needed.">
+<main class="canvas">
+  <div class="head"><div><div class="pills"><span class="pill amber">Takens 1981</span><span class="pill">Cao 1997</span><span class="pill">Lyapunov exponent</span></div>
+    <h2>Chaos is not a fault. <em>Reconstruct the attractor.</em></h2></div></div>
+  <div class="grid" style="grid-template-columns:1.7fr 1fr 1fr">
+    <div class="glass">
+      <div class="micro">Takens' delay-embedding theorem</div>
+      <div class="eq xs">\[\Phi(s(t))=\big[x(t),\,x(t-\tau^*),\dots,x(t-(m^*{-}1)\tau^*)\big]^{\!\top}\!\in\mathbb{R}^{m^*}\]</div>
+      <div class="note">Diffeomorphic to the true attractor if \(\amb{m^*\ge 2d_{\mathcal M}+1}\). Lag from first minimum of mutual information: \(\tau^*=\arg\min_{\tau>0}I(\tau)\).</div>
+    </div>
+    <div class="glass">
+      <div class="micro">Cao's invariant — noise or chaos?</div>
+      <div class="eq sm">\[E_2(m)\equiv 1\;\Rightarrow\;\rd{\text{stochastic}}\]\[E_2(m)\neq 1\;\Rightarrow\;\cy{\text{deterministic}}\]</div>
+    </div>
+    <div class="glass">
+      <div class="micro">Maximal Lyapunov exponent</div>
+      <div class="eq xs">\[\lambda_{\max}=\lim_{t\to\infty}\lim_{\|\delta\mathbf v_0\|\to0}\frac1t\ln\frac{\|\delta\mathbf v_t\|}{\|\delta\mathbf v_0\|}\]</div>
+      <div class="note">Rate at which nearby weather states diverge.</div>
+    </div>
+  </div>
+  <div class="glass fill" style="display:flex;flex-direction:column;gap:14px;padding-bottom:18px">
+    <div class="row" style="justify-content:space-between"><div class="micro">Delay-embedded phase portraits of the same sensor · three regimes</div><span class="note">Noise-robust embedding \(\tilde{\mathbf v}_t=\big[\int_{t-W}^{t}(x-\langle x\rangle_W)\,du,\;x(t),\;\dot x(t)\big]^{\!\top}\)</span></div>
+    <div class="attractor"><img src="img/attractor.png" alt="Three phase portraits: a smooth double-scroll attractor for nominal storm chaos, the same attractor with red trajectories ejected to isolated points for an ADC spike, and a single orange point for a mechanical flatline"></div>
+    <div class="panel3">
+      <div class="kpi"><div class="row" style="justify-content:space-between"><b>Bounded, persistent loop</b><span class="tag gn">KEEP · real weather</span></div><div class="eq xs" style="margin:0">\(0<\lambda_{\max}<\infty,\quad E_2(m)\neq1\)</div></div>
+      <div class="kpi"><div class="row" style="justify-content:space-between"><b>Orthogonal ejection</b><span class="tag rd">FLAG · spike</span></div><div class="eq xs" style="margin:0">\(\lambda_{\max}\to\infty,\quad E_2(m)\to1\)</div></div>
+      <div class="kpi"><div class="row" style="justify-content:space-between"><b>Collapse to a point</b><span class="tag amb">FLAG · flatline</span></div><div class="eq xs" style="margin:0">\(\lambda_{\max}<0,\quad s^2=0\)</div></div>
+    </div>
+  </div>
+</main>
+</section>
+
+<!-- ================= 4 · TDA + CONFORMAL ================= -->
+<section class="slide" data-kicker="Pioneer Math II" data-title="Topology &amp; Conformal Martingales" data-rubric="2,3"
+  data-take="The 24-hour cycle is literally a <b>loop</b> (β₁). A stuck sensor kills the loop; a spike births a stray component (β₀). Ville's inequality then caps false alarms — with <b>no distribution assumed</b>.">
+<main class="canvas">
+  <div class="head"><div><div class="pills"><span class="pill cyan">Vietoris–Rips</span><span class="pill">Bubenik landscapes</span><span class="pill amber">Vovk · Ville 1939</span></div>
+    <h2>The shape of the data, with <em>guaranteed false-alarm control</em></h2></div></div>
+  <div class="grid fill" style="grid-template-columns:1fr 1fr">
+    <div class="glass" style="display:flex;flex-direction:column">
+      <div class="micro">Persistent homology on delay embeddings</div>
+      <div class="eq sm">\[VR_\epsilon(X_W)=\{\sigma\subseteq X_W:\operatorname{diam}\sigma\le\epsilon\}\]\[H_k(K_\epsilon)=\ker\partial_k/\operatorname{im}\partial_{k+1},\qquad \beta_k=\operatorname{rank}H_k\]</div>
+      <div class="eq sm">\[\amb{d_B\big(\mathrm{Dgm}_k(X),\mathrm{Dgm}_k(Y)\big)\le 2\,d_{GH}(X,Y)}\quad\text{(stability)}\]</div>
+      <div class="note">Small sensor noise moves the diagram only a little — so a big move is a real structural break. Score: \(\|\lambda-\lambda^{\text{ref}}\|_p\) on persistence landscapes.</div>
+      <svg viewBox="0 0 600 300" style="width:100%;flex:1;min-height:0;margin-top:8px">
+        <g stroke="rgba(255,255,255,.12)"><line x1="50" y1="270" x2="560" y2="270"/><line x1="50" y1="270" x2="50" y2="14"/></g>
+        <path d="M50,270 L50,270 L550,20 Z" fill="rgba(255,255,255,.03)"/>
+        <line x1="50" y1="270" x2="550" y2="20" stroke="rgba(255,255,255,.3)" stroke-dasharray="4 6" pathLength="1" class="draw" style="--d:.5s"/>
+        <g fill="#38BDF8" opacity=".55" class="fade" style="--d:1s"><circle cx="50" cy="257" r="5"/><circle cx="50" cy="250" r="5"/><circle cx="50" cy="245" r="5"/><circle cx="50" cy="240" r="5"/><circle cx="50" cy="255" r="5"/><circle cx="125" cy="220" r="5"/><circle cx="200" cy="185" r="5"/><circle cx="260" cy="152" r="5"/><circle cx="330" cy="125" r="5"/></g>
+        <line x1="140" y1="270" x2="140" y2="40" stroke="#38BDF8" stroke-dasharray="2 4" opacity=".4" class="fade" style="--d:1.3s"/>
+        <circle cx="140" cy="40" r="11" fill="#38BDF8" class="pop glow-c" style="--d:1.4s"/>
+        <circle cx="50" cy="90" r="9" fill="#FB7185" class="pop glow-r" style="--d:1.8s"/>
+        <g font-size="15" class="fade" style="--d:2s">
+          <text x="160" y="38" fill="#A5DEFB">β₁ diurnal 24 h loop — long-lived</text>
+          <text x="160" y="58" fill="#8A99AD">dies → flatline / decoupled sensor</text>
+          <text x="66" y="95" fill="#FDB4C0">β₀ isolated component → spike</text>
+          <text x="390" y="200" fill="#8A99AD">noise hugs the diagonal</text>
+          <text x="470" y="292" fill="#5e6b7b" font-size="13">birth  b</text><text x="10" y="24" fill="#5e6b7b" font-size="13">death d</text>
+        </g>
+      </svg>
+    </div>
+    <div class="glass" style="display:flex;flex-direction:column">
+      <div class="micro">Conformal prediction → test martingale</div>
+      <div class="eq sm">\[p_{n+1}=\frac{\#\{i:\alpha_i>\alpha_{n+1}\}+\theta_n\,\#\{i:\alpha_i=\alpha_{n+1}\}}{n+1}\]</div>
+      <div class="eq sm">\[S_t=\prod_{k=1}^{t}f_\kappa(p_k),\qquad f_\kappa(p)=\kappa\,p^{\kappa-1}\]</div>
+      <div class="glass" style="background:rgba(245,158,11,.08);border-color:rgba(245,158,11,.35);padding:12px 18px;margin-top:4px;--i:4">
+        <div class="eq" style="margin:0">\[\mathbb{P}_{\mathcal H_0}\Big(\sup_{t\ge1}S_t\ge\tfrac1\alpha\Big)\le\alpha\]</div>
+        <div class="note" style="text-align:center">Ville's inequality · finite-sample · distribution-free</div>
+      </div>
+      <svg viewBox="0 0 620 240" style="width:100%;flex:1;min-height:0;margin-top:10px">
+        <rect x="372.7" y="10" width="207" height="215" fill="rgba(251,113,133,.06)" class="fade" style="--d:.8s"/>
+        <g stroke="rgba(255,255,255,.08)"><line x1="40" x2="580" y1="153.3" y2="153.3"/><line x1="40" x2="40" y1="20" y2="225"/></g>
+        <line x1="40" x2="580" y1="86.7" y2="86.7" stroke="#F59E0B" stroke-width="1.6" stroke-dasharray="6 6"/>
+        <path d="M40.0,155.2 L45.5,151.5 L50.9,158.5 L56.4,149.5 L61.8,155.0 L67.3,157.8 L72.7,147.2 L78.2,152.3 L83.6,138.6 L89.1,142.6 L94.5,133.4 L100.0,126.0 L105.5,129.9 L110.9,138.5 L116.4,133.4 L121.8,132.6 L127.3,139.3 L132.7,148.9 L138.2,155.0 L143.6,158.3 L149.1,168.2 L154.5,156.0 L160.0,164.9 L165.5,166.0 L170.9,162.0 L176.4,156.6 L181.8,158.1 L187.3,166.7 L192.7,164.3 L198.2,170.4 L203.6,177.2 L209.1,180.1 L214.5,185.8 L220.0,175.8 L225.5,165.4 L230.9,164.0 L236.4,171.2 L241.8,175.1 L247.3,176.8 L252.7,182.9 L258.2,187.2 L263.6,188.6 L269.1,196.9 L274.5,204.4 L280.0,204.2 L285.5,210.2 L290.9,215.6 L296.4,220.0 L301.8,220.0 L307.3,220.0 L312.7,220.0 L318.2,220.0 L323.6,220.0 L329.1,220.0 L334.5,220.0 L340.0,220.0 L345.5,220.0 L350.9,220.0 L356.4,220.0 L361.8,220.0 L367.3,220.0 L372.7,220.0 L378.2,220.0 L383.6,213.2 L389.1,196.0 L394.5,177.0 L400.0,162.5 L405.5,148.8 L410.9,130.2 L416.4,113.9 L421.8,80.4 L427.3,64.5 L432.7,48.1 L438.2,34.8 L443.6,20.1 L449.1,20.0 L454.5,20.0 L460.0,20.0 L465.5,20.0 L470.9,20.0 L476.4,20.0 L481.8,20.0 L487.3,20.0 L492.7,20.0 L498.2,20.0 L503.6,20.0 L509.1,20.0 L514.5,20.0 L520.0,20.0 L525.5,20.0 L530.9,20.0 L536.4,20.0 L541.8,20.0 L547.3,20.0 L552.7,20.0 L558.2,20.0 L563.6,20.0 L569.1,20.0 L574.5,20.0 L580.0,20.0" fill="none" stroke="#38BDF8" stroke-width="2.6" pathLength="1" class="draw glow-c" style="--d:.4s"/>
+        <circle cx="421.8" cy="86.7" r="7" fill="#FB7185" class="pop glow-r" style="--d:2.4s"/>
+        <g font-size="14" class="fade" style="--d:1s">
+          <text x="46" y="80" fill="#FCD38A">1/α = 100  (α = 1%)</text>
+          <text x="540" y="148" fill="#5e6b7b">S = 1</text>
+          <text x="578" y="215" fill="#FDB4C0" text-anchor="end">fault injected · t = 62</text>
+          <text x="446" y="108" fill="#FDB4C0">alarm at t = 71 · S ≥ 1/α</text>
+          <text x="50" y="200" fill="#8A99AD">no fault → S stays ≈ 1</text>
+          <text x="6" y="24" fill="#5e6b7b" font-size="12">log S</text>
+        </g>
+      </svg>
+    </div>
+  </div>
+</main>
+</section>
+
+<!-- ================= 5 · INFO + OT ================= -->
+<section class="slide" data-kicker="Pioneer Math III" data-title="Kolmogorov · Shannon · Ma–Sun · Kantorovich" data-rubric="3,4"
+  data-take="Copula entropy finds <b>which sensor drives</b> a failure. Wasserstein distance refuses to alarm on weather-shaped shifts — <b>94% fewer false flags</b>.">
+<main class="canvas">
+  <div class="head"><div><div class="pills"><span class="pill cyan">Copula Entropy · Ma &amp; Sun 2011</span><span class="pill amber">Optimal Transport · Villani</span></div>
+    <h2>Who caused it? <em>Information flow.</em> Is it real? <em>Transport cost.</em></h2></div></div>
+  <div class="grid" style="grid-template-columns:1fr 1fr">
+    <div class="glass">
+      <div class="micro">Copula entropy = −mutual information · transfer entropy as 3 copula entropies</div>
+      <div class="eq sm">\[I(\mathbf X)=-H_c(\mathbf X)=\int_{[0,1]^d}c(\mathbf u)\log c(\mathbf u)\,d\mathbf u\]</div>
+      <div class="eq sm">\[\cy{T_{Y\to X}}=-H_c(x_{t+1},x_t,y_t)+H_c(x_{t+1},x_t)+H_c(x_t,y_t)\]</div>
+      <div class="note">Rank-based → invariant to any monotone sensor non-linearity.</div>
+    </div>
+    <div class="glass">
+      <div class="micro">Kantorovich–Rubinstein duality · sliced Wasserstein</div>
+      <div class="eq sm">\[W_1(\mu,\nu)=\sup_{\|f\|_{\mathrm{Lip}}\le1}\Big(\int f\,d\mu-\int f\,d\nu\Big)\]</div>
+      <div class="eq sm">\[\amb{SW_1}(\mu,\nu)=\int_{\mathbb S^{d-1}}W_1(\theta_\#\mu,\theta_\#\nu)\,d\sigma(\theta)\]</div>
+      <div class="note">In 1-D, \(W_p\) is just sorted order statistics → \(\mathcal O(W\log W)\) on a micro-controller.</div>
+    </div>
+  </div>
+  <div class="grid fill" style="grid-template-columns:1fr 1.08fr">
+    <div class="glass" style="display:flex;flex-direction:column;gap:14px">
+      <div class="micro">False-positive suppression · OT-AD vs KNN-CAD baseline</div>
+      <svg viewBox="0 0 640 250" style="width:100%;flex:1;min-height:0">
+        <g stroke="rgba(255,255,255,.06)"><line x1="150" x2="150" y1="10" y2="214"/><line x1="226.7" x2="226.7" y1="10" y2="214"/><line x1="303.3" x2="303.3" y1="10" y2="214"/><line x1="380" x2="380" y1="10" y2="214"/><line x1="456.7" x2="456.7" y1="10" y2="214"/><line x1="533.3" x2="533.3" y1="10" y2="214"/><line x1="610" x2="610" y1="10" y2="214"/></g>
+        <g font-size="12" fill="#5e6b7b" text-anchor="middle"><text x="150" y="232">0</text><text x="303.3" y="232">20</text><text x="456.7" y="232">40</text><text x="610" y="232">60 flags</text></g>
+        <text x="0" y="54" fill="#F3F6FA" font-size="16">Temperature</text>
+        <rect x="150" y="22" width="23" height="22" rx="6" fill="#F59E0B" class="grow glow-a" style="--d:.8s"/>
+        <rect x="150" y="50" width="414" height="22" rx="6" fill="#4b5767" class="grow" style="--d:.6s"/>
+        <text x="182" y="39" fill="#FCD38A" font-size="15" font-weight="500" class="fade" style="--d:1.6s">3</text>
+        <text x="572" y="67" fill="#C9D3DF" font-size="15" class="fade" style="--d:1.6s">54</text>
+        <text x="0" y="154" fill="#F3F6FA" font-size="16">Pressure</text>
+        <rect x="150" y="122" width="23" height="22" rx="6" fill="#F59E0B" class="grow glow-a" style="--d:1s"/>
+        <rect x="150" y="150" width="345" height="22" rx="6" fill="#4b5767" class="grow" style="--d:.8s"/>
+        <text x="182" y="139" fill="#FCD38A" font-size="15" font-weight="500" class="fade" style="--d:1.8s">3</text>
+        <text x="503" y="167" fill="#C9D3DF" font-size="15" class="fade" style="--d:1.8s">45</text>
+      </svg>
+      <div class="grid" style="grid-template-columns:1fr 1fr 1fr;gap:12px">
+        <div class="kpi"><div class="v amb">−94.4%</div><div class="l">temperature false triggers</div></div>
+        <div class="kpi"><div class="v amb">−93.3%</div><div class="l">pressure false triggers</div></div>
+        <div class="kpi"><div class="v">&lt;150</div><div class="l">points for OT buffer</div></div>
+      </div>
+    </div>
+    <div class="glass" style="display:flex;flex-direction:column;gap:10px">
+      <div class="row" style="justify-content:space-between"><div class="micro">Directed transfer entropy T<sub>ij</sub> (nats) · source → target</div><span class="note">1.6 <span style="display:inline-block;width:90px;height:8px;border-radius:4px;vertical-align:middle;background:linear-gradient(90deg,#16273a,#38BDF8,#F59E0B)"></span> 5.2</span></div>
+      <div class="hm" id="hm"></div>
+      <div class="kpi" style="border-color:rgba(245,158,11,.35);background:rgba(245,158,11,.07);margin-top:auto">
+        <div class="eq xs" style="margin:0">\(t_{53}=5.0867>t_{35}=5.0793,\quad t_{54}=4.7384>t_{45}=4.7244\)</div>
+        <div class="note" style="color:var(--ink2)"><b class="amb">D5 is the root-cause driver</b> — information flows out of it; D3 and D4 are secondary victims.</div>
+      </div>
+    </div>
+  </div>
+</main>
+</section>
+
+<!-- ================= 6 · ROBUST + EVT ================= -->
+<section class="slide" data-kicker="Pioneer Math IV" data-title="Rousseeuw · Tukey · Gumbel · Pickands" data-rubric="2,3"
+  data-take="Robust estimators survive <b>50% contamination</b>. Extreme-value theory tells us how big a <b>real</b> storm can get — anything beyond that is hardware.">
+<main class="canvas">
+  <div class="head"><div><div class="pills"><span class="pill amber">50% breakdown</span><span class="pill">χ²₅ · 0.999 = 20.515</span><span class="pill cyan">POT–GPD</span></div>
+    <h2>Statistics that can't be fooled, and <em>the physics of the tail</em></h2></div></div>
+  <div class="grid fill" style="grid-template-columns:1fr 1.05fr">
+    <div class="glass" style="display:flex;flex-direction:column;gap:6px">
+      <div class="micro">Breakdown point — share of bad data an estimator survives</div>
+      <svg viewBox="0 0 600 92" style="width:100%">
+        <text x="0" y="22" fill="#C9D3DF" font-size="15">mean, σ  (3σ rule)</text><rect x="210" y="10" width="380" height="16" rx="8" fill="rgba(255,255,255,.06)"/><rect x="210" y="10" width="4" height="16" rx="2" fill="#FB7185" class="glow-r"/><text x="222" y="23" fill="#FDB4C0" font-size="14" font-family="JetBrains Mono">0%</text>
+        <text x="0" y="62" fill="#C9D3DF" font-size="15">median, MAD, MCD</text><rect x="210" y="50" width="380" height="16" rx="8" fill="rgba(255,255,255,.06)"/><rect x="210" y="50" width="190" height="16" rx="8" fill="#F59E0B" class="grow glow-a" style="--d:.7s"/><text x="410" y="63" fill="#FCD38A" font-size="14" font-family="JetBrains Mono">50% · the maximum</text>
+      </svg>
+      <div class="eq">\[M_{t,i}=\frac{0.6745\,|e_{t,i}-\operatorname{med}(e_i)|}{\mathrm{MAD}_i}>3.5\]</div>
+      <div class="eq sm">\[C^{\pm}_{t,i}=\max\!\big(0,\;C^{\pm}_{t-1,i}\pm z_{t,i}-\kappa\big)>h,\quad \kappa=0.5,\ h=5\]</div>
+      <div class="eq sm">\[\mathcal H^*=\arg\min_{|\mathcal H|=h}\det\hat{\boldsymbol\Sigma}_{\mathcal H}\;\Rightarrow\;\amb{D^2_{\mathrm{MCD}}(\mathbf e_t)\sim\chi^2_5},\ \tau=20.515\]</div>
+      <div class="note">Plus Tukey's redescending biweight \(\psi_B(u)=u\,(1-u^2/c^2)^2\,\mathbb I(|u|\le c)\): outliers get <b>zero</b> weight, not just less.</div>
+    </div>
+    <div class="glass" style="display:flex;flex-direction:column;gap:4px">
+      <div class="micro">Peaks-over-threshold · Pickands–Balkema–de Haan</div>
+      <div class="eq sm">\[H(y;\sigma_u,\xi)=1-\Big(1+\frac{\xi y}{\sigma_u}\Big)^{-1/\xi}\]\[x_{N}=u+\frac{\sigma_u}{\xi}\Big[(N\,m_{\text{obs}}\,\zeta_u)^{\xi}-1\Big]\quad\text{(N-year return level)}\]</div>
+      <div class="grid" style="grid-template-columns:1fr 1fr;gap:12px">
+        <div class="kpi"><div class="micro">Temperature · Weibull</div><div class="eq xs" style="margin:4px 0 0">\(\xi_T<0\Rightarrow x_{\max}=u-\sigma_u/\xi_T\)</div><div class="l">hard physical ceiling</div></div>
+        <div class="kpi"><div class="micro">Monsoon rain · Fréchet</div><div class="eq xs" style="margin:4px 0 0">\(\xi_R\in[0.18,\,0.28]>0\)</div><div class="l">heavy tail — big storms are real</div></div>
+      </div>
+      <svg viewBox="0 0 640 262" style="width:100%;flex:1;min-height:0;margin-top:6px">
+        <rect x="60" y="8" width="560" height="89" fill="rgba(251,113,133,.06)"/>
+        <g stroke="rgba(255,255,255,.07)"><line x1="60" x2="620" y1="250" y2="250"/><line x1="60" x2="60" y1="8" y2="250"/><line x1="246.7" x2="246.7" y1="8" y2="250" stroke-dasharray="2 5"/><line x1="433.3" x2="433.3" y1="8" y2="250" stroke-dasharray="2 5"/></g>
+        <path d="M60.0,224.1 L63.7,223.7 L67.5,223.3 L71.2,222.9 L74.9,222.4 L78.7,222.0 L82.4,221.6 L86.1,221.2 L89.9,220.7 L93.6,220.3 L97.3,219.9 L101.1,219.4 L104.8,218.9 L108.5,218.5 L112.3,218.0 L116.0,217.6 L119.7,217.1 L123.5,216.6 L127.2,216.1 L130.9,215.6 L134.7,215.1 L138.4,214.6 L142.1,214.1 L145.9,213.6 L149.6,213.1 L153.3,212.6 L157.1,212.0 L160.8,211.5 L164.5,210.9 L168.3,210.4 L172.0,209.8 L175.7,209.3 L179.5,208.7 L183.2,208.1 L186.9,207.6 L190.7,207.0 L194.4,206.4 L198.1,205.8 L201.9,205.2 L205.6,204.6 L209.3,203.9 L213.1,203.3 L216.8,202.7 L220.5,202.0 L224.3,201.4 L228.0,200.7 L231.7,200.1 L235.5,199.4 L239.2,198.7 L242.9,198.0 L246.7,197.3 L250.4,196.6 L254.1,195.9 L257.9,195.2 L261.6,194.5 L265.3,193.8 L269.1,193.0 L272.8,192.3 L276.5,191.5 L280.3,190.8 L284.0,190.0 L287.7,189.2 L291.5,188.4 L295.2,187.6 L298.9,186.8 L302.7,186.0 L306.4,185.2 L310.1,184.3 L313.9,183.5 L317.6,182.6 L321.3,181.8 L325.1,180.9 L328.8,180.0 L332.5,179.1 L336.3,178.2 L340.0,177.3 L343.7,176.4 L347.5,175.4 L351.2,174.5 L354.9,173.5 L358.7,172.6 L362.4,171.6 L366.1,170.6 L369.9,169.6 L373.6,168.6 L377.3,167.6 L381.1,166.6 L384.8,165.5 L388.5,164.5 L392.3,163.4 L396.0,162.3 L399.7,161.2 L403.5,160.1 L407.2,159.0 L410.9,157.9 L414.7,156.8 L418.4,155.6 L422.1,154.5 L425.9,153.3 L429.6,152.1 L433.3,150.9 L437.1,149.7 L440.8,148.5 L444.5,147.2 L448.3,146.0 L452.0,144.7 L455.7,143.4 L459.5,142.1 L463.2,140.8 L466.9,139.5 L470.7,138.1 L474.4,136.8 L478.1,135.4 L481.9,134.0 L485.6,132.6 L489.3,131.2 L493.1,129.8 L496.8,128.3 L500.5,126.9 L504.3,125.4 L508.0,123.9 L511.7,122.4 L515.5,120.9 L519.2,119.3 L522.9,117.8 L526.7,116.2 L530.4,114.6 L534.1,113.0 L537.9,111.3 L541.6,109.7 L545.3,108.0 L549.1,106.3 L552.8,104.6 L556.5,102.9 L560.3,101.2 L564.0,99.4 L567.7,97.6 L571.5,95.8 L575.2,94.0 L578.9,92.2 L582.7,90.3 L586.4,88.4 L590.1,86.5 L593.9,84.6 L597.6,82.7 L601.3,80.7 L605.1,78.7 L608.8,76.7 L612.5,74.7 L616.3,72.6 L620.0,70.6 L620.0,124.0 L616.3,125.2 L612.5,126.5 L608.8,127.7 L605.1,128.9 L601.3,130.0 L597.6,131.2 L593.9,132.4 L590.1,133.5 L586.4,134.7 L582.7,135.8 L578.9,136.9 L575.2,138.0 L571.5,139.1 L567.7,140.2 L564.0,141.3 L560.3,142.4 L556.5,143.4 L552.8,144.5 L549.1,145.5 L545.3,146.6 L541.6,147.6 L537.9,148.6 L534.1,149.6 L530.4,150.6 L526.7,151.6 L522.9,152.6 L519.2,153.6 L515.5,154.5 L511.7,155.5 L508.0,156.4 L504.3,157.4 L500.5,158.3 L496.8,159.2 L493.1,160.1 L489.3,161.0 L485.6,161.9 L481.9,162.8 L478.1,163.7 L474.4,164.6 L470.7,165.4 L466.9,166.3 L463.2,167.2 L459.5,168.0 L455.7,168.8 L452.0,169.7 L448.3,170.5 L444.5,171.3 L440.8,172.1 L437.1,172.9 L433.3,173.7 L429.6,174.5 L425.9,175.3 L422.1,176.0 L418.4,176.8 L414.7,177.6 L410.9,178.3 L407.2,179.1 L403.5,179.8 L399.7,180.5 L396.0,181.3 L392.3,182.0 L388.5,182.7 L384.8,183.4 L381.1,184.1 L377.3,184.8 L373.6,185.5 L369.9,186.2 L366.1,186.8 L362.4,187.5 L358.7,188.2 L354.9,188.8 L351.2,189.5 L347.5,190.1 L343.7,190.8 L340.0,191.4 L336.3,192.0 L332.5,192.7 L328.8,193.3 L325.1,193.9 L321.3,194.5 L317.6,195.1 L313.9,195.7 L310.1,196.3 L306.4,196.9 L302.7,197.5 L298.9,198.0 L295.2,198.6 L291.5,199.2 L287.7,199.7 L284.0,200.3 L280.3,200.8 L276.5,201.4 L272.8,201.9 L269.1,202.5 L265.3,203.0 L261.6,203.5 L257.9,204.1 L254.1,204.6 L250.4,205.1 L246.7,205.6 L242.9,206.1 L239.2,206.6 L235.5,207.1 L231.7,207.6 L228.0,208.1 L224.3,208.6 L220.5,209.0 L216.8,209.5 L213.1,210.0 L209.3,210.4 L205.6,210.9 L201.9,211.4 L198.1,211.8 L194.4,212.3 L190.7,212.7 L186.9,213.2 L183.2,213.6 L179.5,214.0 L175.7,214.5 L172.0,214.9 L168.3,215.3 L164.5,215.7 L160.8,216.1 L157.1,216.6 L153.3,217.0 L149.6,217.4 L145.9,217.8 L142.1,218.2 L138.4,218.6 L134.7,218.9 L130.9,219.3 L127.2,219.7 L123.5,220.1 L119.7,220.5 L116.0,220.8 L112.3,221.2 L108.5,221.6 L104.8,221.9 L101.1,222.3 L97.3,222.7 L93.6,223.0 L89.9,223.4 L86.1,223.7 L82.4,224.1 L78.7,224.4 L74.9,224.7 L71.2,225.1 L67.5,225.4 L63.7,225.7 L60.0,226.1 Z" fill="rgba(56,189,248,.12)" class="fade" style="--d:1.4s"/>
+        <path d="M60.0,225.1 L63.7,224.7 L67.5,224.3 L71.2,224.0 L74.9,223.6 L78.7,223.2 L82.4,222.8 L86.1,222.4 L89.9,222.1 L93.6,221.7 L97.3,221.3 L101.1,220.9 L104.8,220.4 L108.5,220.0 L112.3,219.6 L116.0,219.2 L119.7,218.8 L123.5,218.3 L127.2,217.9 L130.9,217.5 L134.7,217.0 L138.4,216.6 L142.1,216.1 L145.9,215.7 L149.6,215.2 L153.3,214.8 L157.1,214.3 L160.8,213.8 L164.5,213.3 L168.3,212.9 L172.0,212.4 L175.7,211.9 L179.5,211.4 L183.2,210.9 L186.9,210.4 L190.7,209.8 L194.4,209.3 L198.1,208.8 L201.9,208.3 L205.6,207.7 L209.3,207.2 L213.1,206.6 L216.8,206.1 L220.5,205.5 L224.3,205.0 L228.0,204.4 L231.7,203.8 L235.5,203.2 L239.2,202.7 L242.9,202.1 L246.7,201.5 L250.4,200.9 L254.1,200.3 L257.9,199.6 L261.6,199.0 L265.3,198.4 L269.1,197.7 L272.8,197.1 L276.5,196.5 L280.3,195.8 L284.0,195.1 L287.7,194.5 L291.5,193.8 L295.2,193.1 L298.9,192.4 L302.7,191.7 L306.4,191.0 L310.1,190.3 L313.9,189.6 L317.6,188.9 L321.3,188.1 L325.1,187.4 L328.8,186.6 L332.5,185.9 L336.3,185.1 L340.0,184.4 L343.7,183.6 L347.5,182.8 L351.2,182.0 L354.9,181.2 L358.7,180.4 L362.4,179.6 L366.1,178.7 L369.9,177.9 L373.6,177.1 L377.3,176.2 L381.1,175.3 L384.8,174.5 L388.5,173.6 L392.3,172.7 L396.0,171.8 L399.7,170.9 L403.5,170.0 L407.2,169.0 L410.9,168.1 L414.7,167.2 L418.4,166.2 L422.1,165.3 L425.9,164.3 L429.6,163.3 L433.3,162.3 L437.1,161.3 L440.8,160.3 L444.5,159.3 L448.3,158.2 L452.0,157.2 L455.7,156.1 L459.5,155.1 L463.2,154.0 L466.9,152.9 L470.7,151.8 L474.4,150.7 L478.1,149.6 L481.9,148.4 L485.6,147.3 L489.3,146.1 L493.1,145.0 L496.8,143.8 L500.5,142.6 L504.3,141.4 L508.0,140.2 L511.7,138.9 L515.5,137.7 L519.2,136.4 L522.9,135.2 L526.7,133.9 L530.4,132.6 L534.1,131.3 L537.9,130.0 L541.6,128.6 L545.3,127.3 L549.1,125.9 L552.8,124.6 L556.5,123.2 L560.3,121.8 L564.0,120.4 L567.7,118.9 L571.5,117.5 L575.2,116.0 L578.9,114.5 L582.7,113.1 L586.4,111.6 L590.1,110.0 L593.9,108.5 L597.6,106.9 L601.3,105.4 L605.1,103.8 L608.8,102.2 L612.5,100.6 L616.3,98.9 L620.0,97.3" fill="none" stroke="#38BDF8" stroke-width="2.8" pathLength="1" class="draw glow-c" style="--d:.4s"/>
+        <line x1="489.5" x2="489.5" y1="146" y2="250" stroke="#F59E0B" stroke-dasharray="4 5" class="fade" style="--d:1.8s"/>
+        <line x1="60" x2="489.5" y1="146" y2="146" stroke="#F59E0B" stroke-dasharray="4 5" class="fade" style="--d:1.8s"/>
+        <circle cx="489.5" cy="146" r="6" fill="#F59E0B" class="pop glow-a" style="--d:2s"/>
+        <circle cx="283.8" cy="195.2" r="8" fill="#34D399" class="pop" style="--d:2.3s;filter:drop-shadow(0 0 10px #34D399)"/>
+        <circle cx="600" cy="28.8" r="8" fill="#FB7185" class="pop glow-r" style="--d:2.6s"/>
+        <g font-size="14" class="fade" style="--d:2.2s">
+          <text x="70" y="140" fill="#FCD38A">x₂₀₀ ≈ 118 mm/hr — protection ceiling</text>
+          <text x="298" y="214" fill="#A7F0D3">62 mm/hr cloudburst ≈ 16-yr event → VALID</text>
+          <text x="330" y="33" fill="#FDB4C0">250 mm/hr ADC spike → beyond x₁₀₀₀</text>
+          <text x="70" y="26" fill="#8A99AD" font-size="13">unphysical zone</text>
+        </g>
+        <g font-size="12" fill="#5e6b7b"><text x="56" y="262">1 yr</text><text x="236" y="262">10</text><text x="420" y="262">100</text><text x="592" y="262">1000</text><text x="4" y="16">mm/hr</text></g>
+      </svg>
+      <div class="note" style="font-size:13px">Illustrative fit (u = 15, σ<sub>u</sub> = 6, ξ = 0.22); tail calibrated against satellite exceedances via SEDI.</div>
+    </div>
+  </div>
+</main>
+</section>
+
+<!-- ================= 7 · PHYSICS + KAN ================= -->
+<section class="slide" data-kicker="Physics-Informed" data-title="Thermodynamic Invariants + Fourier KAN-AD" data-rubric="2,3"
+  data-take="The atmosphere obeys <b>conservation laws</b>. A reading that breaks physics is a sensor problem — and this check needs <b>zero training data</b>.">
+<main class="canvas">
+  <div class="head"><div><div class="pills"><span class="pill amber">\(\Phi_{\text{phys}}(\mathbf x_t)=0\) for real weather</span><span class="pill cyan">KAN-AD · ICML 2025</span></div>
+    <h2>Physics as a hard constraint, <em>learning only for the rest</em></h2></div></div>
+  <div class="grid fill" style="grid-template-columns:1.12fr 1fr">
+    <div class="glass" style="display:flex;flex-direction:column;justify-content:space-between">
+      <div class="micro">Three zero-residual invariants</div>
+      <div>
+        <div class="row" style="gap:10px"><span class="tag amb">I</span><b>Clausius–Clapeyron</b><span class="note">humidity must fall as temperature rises (no rain)</span></div>
+        <div class="eq sm">\[e_s(T)=6.112\exp\!\Big(\frac{17.67\,T}{T+243.5}\Big)\]\[\Rightarrow\;\frac{dH}{dt}\cdot\frac{dT}{dt}=-\amb{\Big[\frac{4302.645\,H}{(T+243.5)^2}\Big]}\Big(\frac{dT}{dt}\Big)^2<0\]</div>
+      </div>
+      <div>
+        <div class="row" style="gap:10px"><span class="tag cy">II</span><b>Hypsometric bound at z ≈ 920 m</b></div>
+        <div class="eq sm">\[P_{\text{st}}=P_{\text{SLP}}\exp\!\Big(-\frac{g\,z_{\text{BLR}}}{R_d\,\bar T_v}\Big)\in\cy{[894.0,\;926.5]}\ \text{hPa}\]\[|\dot P_{\text{st}}-\dot P_{S_2}|\le3.5\ \text{hPa per 15 min}\quad(S_2\text{ semidiurnal tide})\]</div>
+      </div>
+      <div>
+        <div class="row" style="gap:10px"><span class="tag gn">III</span><b>Psychrometric rain cooling</b><span class="note">real rain must cool the air</span></div>
+        <div class="eq sm">\[e(T,H)=e_s(T_w)-\gamma\,P_{\text{st}}(T-T_w)\]\[R_t\ge10\ \tfrac{\text{mm}}{\text{hr}}\;\Rightarrow\;\gn{\Delta T_t\le-0.35\,\Delta T_w(t-1)}\]</div>
+      </div>
+    </div>
+    <div class="glass" style="display:flex;flex-direction:column;gap:6px">
+      <div class="micro">Kolmogorov–Arnold representation</div>
+      <div class="eq sm">\[f(\mathbf x)=\sum_{q=1}^{2n+1}\Psi_q\Big(\sum_{p=1}^{n}\psi_{q,p}(x_p)\Big)\]\[\text{Fourier KAN-AD edge:}\quad\amb{\psi(x)=\sum_{k=1}^{K}a_k\cos kx+b_k\sin kx}\]</div>
+      <svg viewBox="0 0 560 160" style="width:100%;flex:1;min-height:0">
+        <g class="fade" style="--d:.3s"><circle cx="10" cy="76.3" r="3.2" fill="#C9D3DF" opacity="0.55"/><circle cx="20" cy="71.9" r="3.2" fill="#C9D3DF" opacity="0.55"/><circle cx="30" cy="61.1" r="3.2" fill="#C9D3DF" opacity="0.55"/><circle cx="40" cy="57.0" r="3.2" fill="#C9D3DF" opacity="0.55"/><circle cx="50" cy="51.3" r="3.2" fill="#C9D3DF" opacity="0.55"/><circle cx="60" cy="39.0" r="3.2" fill="#C9D3DF" opacity="0.55"/><circle cx="70" cy="35.8" r="3.2" fill="#C9D3DF" opacity="0.55"/><circle cx="80" cy="46.8" r="3.2" fill="#C9D3DF" opacity="0.55"/><circle cx="90" cy="40.2" r="3.2" fill="#C9D3DF" opacity="0.55"/><circle cx="100" cy="43.4" r="3.2" fill="#C9D3DF" opacity="0.55"/><circle cx="110" cy="59.3" r="3.2" fill="#C9D3DF" opacity="0.55"/><circle cx="120" cy="58.7" r="3.2" fill="#C9D3DF" opacity="0.55"/><circle cx="130" cy="71.7" r="3.2" fill="#C9D3DF" opacity="0.55"/><circle cx="140" cy="75.3" r="3.2" fill="#C9D3DF" opacity="0.55"/><circle cx="150" cy="86.4" r="3.2" fill="#C9D3DF" opacity="0.55"/><circle cx="160" cy="88.1" r="3.2" fill="#C9D3DF" opacity="0.55"/><circle cx="170" cy="102.8" r="3.2" fill="#C9D3DF" opacity="0.55"/><circle cx="180" cy="112.8" r="3.2" fill="#C9D3DF" opacity="0.55"/><circle cx="190" cy="113.2" r="3.2" fill="#C9D3DF" opacity="0.55"/><circle cx="200" cy="119.8" r="3.2" fill="#C9D3DF" opacity="0.55"/><circle cx="210" cy="120.3" r="3.2" fill="#C9D3DF" opacity="0.55"/><circle cx="220" cy="111.3" r="3.2" fill="#C9D3DF" opacity="0.55"/><circle cx="230" cy="118.5" r="3.2" fill="#C9D3DF" opacity="0.55"/><circle cx="240" cy="111.8" r="3.2" fill="#C9D3DF" opacity="0.55"/><circle cx="250" cy="101.6" r="3.2" fill="#C9D3DF" opacity="0.55"/><circle cx="260" cy="90.5" r="3.2" fill="#C9D3DF" opacity="0.55"/><circle cx="270" cy="93.9" r="3.2" fill="#C9D3DF" opacity="0.55"/><circle cx="280" cy="79.6" r="3.2" fill="#C9D3DF" opacity="0.55"/><circle cx="290" cy="74.3" r="3.2" fill="#C9D3DF" opacity="0.55"/><circle cx="300" cy="68.2" r="3.2" fill="#C9D3DF" opacity="0.55"/><circle cx="310" cy="58.6" r="3.2" fill="#C9D3DF" opacity="0.55"/><circle cx="320" cy="55.4" r="3.2" fill="#C9D3DF" opacity="0.55"/><circle cx="330" cy="-18.4" r="3.2" fill="#FB7185" opacity="1"/><circle cx="340" cy="46.8" r="3.2" fill="#C9D3DF" opacity="0.55"/><circle cx="350" cy="41.3" r="3.2" fill="#C9D3DF" opacity="0.55"/><circle cx="360" cy="49.7" r="3.2" fill="#C9D3DF" opacity="0.55"/><circle cx="370" cy="52.4" r="3.2" fill="#C9D3DF" opacity="0.55"/><circle cx="380" cy="46.7" r="3.2" fill="#C9D3DF" opacity="0.55"/><circle cx="390" cy="54.0" r="3.2" fill="#C9D3DF" opacity="0.55"/><circle cx="400" cy="63.0" r="3.2" fill="#C9D3DF" opacity="0.55"/><circle cx="410" cy="82.1" r="3.2" fill="#C9D3DF" opacity="0.55"/><circle cx="420" cy="83.5" r="3.2" fill="#C9D3DF" opacity="0.55"/><circle cx="430" cy="94.8" r="3.2" fill="#C9D3DF" opacity="0.55"/><circle cx="440" cy="98.1" r="3.2" fill="#C9D3DF" opacity="0.55"/><circle cx="450" cy="107.7" r="3.2" fill="#C9D3DF" opacity="0.55"/><circle cx="460" cy="111.3" r="3.2" fill="#C9D3DF" opacity="0.55"/><circle cx="470" cy="114.3" r="3.2" fill="#C9D3DF" opacity="0.55"/><circle cx="480" cy="119.1" r="3.2" fill="#C9D3DF" opacity="0.55"/><circle cx="490" cy="118.6" r="3.2" fill="#C9D3DF" opacity="0.55"/><circle cx="500" cy="120.6" r="3.2" fill="#C9D3DF" opacity="0.55"/><circle cx="510" cy="113.0" r="3.2" fill="#C9D3DF" opacity="0.55"/><circle cx="520" cy="110.4" r="3.2" fill="#C9D3DF" opacity="0.55"/><circle cx="530" cy="102.0" r="3.2" fill="#C9D3DF" opacity="0.55"/><circle cx="540" cy="95.6" r="3.2" fill="#C9D3DF" opacity="0.55"/><circle cx="550" cy="82.4" r="3.2" fill="#C9D3DF" opacity="0.55"/></g>
+        <path d="M10.0,74.1 L20.0,69.8 L30.0,63.3 L40.0,56.5 L50.0,49.1 L60.0,42.0 L70.0,40.5 L80.0,40.9 L90.0,43.5 L100.0,47.6 L110.0,53.8 L120.0,63.2 L130.0,68.6 L140.0,77.8 L150.0,83.2 L160.0,92.4 L170.0,101.2 L180.0,109.6 L190.0,115.3 L200.0,117.8 L210.0,117.1 L220.0,116.7 L230.0,113.9 L240.0,110.6 L250.0,101.3 L260.0,95.3 L270.0,88.0 L280.0,82.6 L290.0,74.1 L300.0,67.0 L310.0,60.7 L320.0,31.9 L330.0,27.9 L340.0,23.2 L350.0,45.9 L360.0,47.8 L370.0,49.6 L380.0,51.0 L390.0,54.6 L400.0,66.4 L410.0,76.2 L420.0,86.8 L430.0,92.1 L440.0,100.2 L450.0,105.7 L460.0,111.1 L470.0,114.9 L480.0,117.3 L490.0,119.4 L500.0,117.4 L510.0,114.7 L520.0,108.5 L530.0,102.7 L540.0,93.4 L550.0,89.0" fill="none" stroke="#FB7185" stroke-width="2" pathLength="1" class="draw" style="--d:.6s" opacity=".9"/>
+        <path d="M10.0,80.0 L20.0,71.2 L30.0,62.9 L40.0,55.6 L50.0,49.5 L60.0,45.1 L70.0,42.6 L80.0,42.1 L90.0,43.6 L100.0,47.1 L110.0,52.4 L120.0,59.1 L130.0,67.0 L140.0,75.6 L150.0,84.4 L160.0,93.0 L170.0,100.9 L180.0,107.6 L190.0,112.9 L200.0,116.4 L210.0,117.9 L220.0,117.4 L230.0,114.9 L240.0,110.5 L250.0,104.4 L260.0,97.1 L270.0,88.8 L280.0,80.0 L290.0,71.2 L300.0,62.9 L310.0,55.6 L320.0,49.5 L330.0,45.1 L340.0,42.6 L350.0,42.1 L360.0,43.6 L370.0,47.1 L380.0,52.4 L390.0,59.1 L400.0,67.0 L410.0,75.6 L420.0,84.4 L430.0,93.0 L440.0,100.9 L450.0,107.6 L460.0,112.9 L470.0,116.4 L480.0,117.9 L490.0,117.4 L500.0,114.9 L510.0,110.5 L520.0,104.4 L530.0,97.1 L540.0,88.8 L550.0,80.0" fill="none" stroke="#F59E0B" stroke-width="3" pathLength="1" class="draw glow-a" style="--d:1.2s"/>
+        <g font-size="14" class="fade" style="--d:2s"><text x="12" y="140" fill="#FDB4C0">━ B-spline KAN: local knots memorise the spike</text><text x="12" y="157" fill="#FCD38A">━ Fourier KAN-AD: global harmonics ignore it</text></g>
+      </svg>
+      <div class="grid" style="grid-template-columns:repeat(4,1fr);gap:10px">
+        <div class="kpi"><div class="v" style="font-size:30px;white-space:nowrap">&lt;1k</div><div class="l">parameters</div></div>
+        <div class="kpi"><div class="v amb" style="font-size:30px;white-space:nowrap">5 KB</div><div class="l">INT8 flash</div></div>
+        <div class="kpi"><div class="v" style="font-size:30px;white-space:nowrap">+15–27%</div><div class="l">F₁ vs SOTA</div></div>
+        <div class="kpi"><div class="v cy" style="font-size:30px;white-space:nowrap">55×</div><div class="l">faster inference</div></div>
+      </div>
+    </div>
+  </div>
+</main>
+</section>
+
+<!-- ================= 8 · ISRO / NASA ================= -->
+<section class="slide" data-kicker="Spaceborne Oracle" data-title="ISRO INSAT-3DR/3DS + NASA/JAXA GPM" data-rubric="3,1"
+  data-take="Gauge says <b>0 mm</b>. The sky says <b>34 mm/hr</b>. Satellites cast the deciding vote — as belief mass that keeps doubt explicit, not a guess.">
+<main class="canvas">
+  <div class="head"><div><div class="pills"><span class="pill amber"><span class="dot"></span>ISRO · INSAT-3DR / 3DS Imager · MOSDAC</span><span class="pill cyan"><span class="dot"></span>NASA/JAXA · GPM IMERG</span><span class="pill">NCMRWF 4D-EnKF</span></div>
+    <h2>When ground and sky disagree, <em>the sky casts the deciding vote</em></h2></div></div>
+  <div class="grid fill" style="grid-template-columns:1fr 1.1fr">
+    <div class="grid" style="grid-template-rows:auto 1fr">
+      <div class="glass">
+        <div class="micro">How we apply math to ISRO data · 3DIMG_L2B_HEM</div>
+        <div class="row" style="gap:8px;margin:8px 0 2px"><span class="tag amb">TIR-1 10.7 µm</span><span class="tag amb">WV 6.7 µm</span><span class="tag cy">89/157 GHz ice</span><span class="tag cy">18/37 GHz rain</span><span class="tag">4×4 km pixel</span></div>
+        <div class="eq xs">\[Z=\frac{T_{\text{mean}}-T_b}{\sigma_{T_b}},\qquad R_{\text{HE}}=\frac{R_c\,Z^2+R_n\,(1.5-Z)^2}{Z^2+(1.5-Z)^2}\]</div>
+        <div class="note"><b>1</b> Align 15-min staggered scan blocks to AWS time (equinox scan-direction lag) · <b>2</b> Pixel → point via elevation-covariate block-to-point co-kriging · <b>3</b> Fuse with Dempster–Shafer →</div>
+      </div>
+      <div class="glass" style="display:flex;flex-direction:column">
+        <div class="row" style="justify-content:space-between"><div class="micro">Is the oracle trustworthy? INSAT-3D H-E vs ground</div><span class="tag cy">r = 0.81 · POD &gt; 95%</span></div>
+        <svg viewBox="0 0 600 200" style="width:100%;flex:1;min-height:0">
+          <g font-size="13" fill="#C9D3DF">
+            <text x="0" y="26">Uttarakhand · IMD ground</text><rect x="190" y="12" width="342" height="20" rx="5" fill="#34D399" class="grow" style="--d:.5s"/><text x="540" y="27" font-family="JetBrains Mono" fill="#A7F0D3">322.9</text>
+            <text x="0" y="58">Uttarakhand · INSAT-3D H-E</text><rect x="190" y="44" width="335" height="20" rx="5" fill="#F59E0B" class="grow glow-a" style="--d:.65s"/><text x="533" y="59" font-family="JetBrains Mono" fill="#FCD38A">316.0</text>
+            <text x="0" y="100">Phailin 3-day · CPC merged</text><rect x="190" y="86" width="191" height="20" rx="5" fill="#8A99AD" class="grow" style="--d:.8s"/><text x="389" y="101" font-family="JetBrains Mono">180.0</text>
+            <text x="0" y="132">Phailin 3-day · INSAT-3D H-E</text><rect x="190" y="118" width="117" height="20" rx="5" fill="#F59E0B" class="grow glow-a" style="--d:.95s"/><text x="315" y="133" font-family="JetBrains Mono" fill="#FCD38A">110.1</text>
+            <text x="0" y="164">Phailin 3-day · TRMM</text><rect x="190" y="150" width="64" height="20" rx="5" fill="#4b5767" class="grow" style="--d:1.1s"/><text x="262" y="165" font-family="JetBrains Mono">60.0</text>
+          </g>
+          <text x="190" y="194" font-size="13" fill="#8A99AD" class="fade" style="--d:1.6s">mm · under-reads cyclones → <tspan fill="#FCD38A">never trust one satellite alone</tspan></text>
+        </svg>
+      </div>
+    </div>
+    <div class="glass" style="display:flex;flex-direction:column;gap:10px">
+      <div class="micro">Dempster–Shafer: is the rain gauge clogged?</div>
+      <div class="row" style="gap:8px"><span class="tag rd">R<sub>AWS</sub> = 0 mm</span><span class="tag amb">CTT = 215 K</span><span class="tag amb">R<sub>HE</sub> = 34 mm/hr</span><span class="tag cy">R<sub>IMERG</sub> = 28.5 mm/hr</span><span class="tag gn">ΔT = −4.8 °C</span><span class="tag gn">H = 97%</span></div>
+      <div class="eq xs" style="margin:2px 0">\(\Theta=\{\theta_1{:}\,\text{NormalDry},\ \theta_2{:}\,\text{ExtremeStorm},\ \theta_3{:}\,\text{GaugeStuck}\}\)</div>
+      <div class="mass"><span>m₁ · INSAT-3DR</span><div class="track"><span class="grow" style="width:85%;background:#38BDF8;--d:.5s">{θ₂,θ₃} .85</span><span style="width:2%;background:#8A99AD"></span><span style="width:13%;background:rgba(255,255,255,.18);color:#C9D3DF">Θ .13</span></div></div>
+      <div class="mass"><span>m₂ · GPM IMERG</span><div class="track"><span class="grow" style="width:90%;background:#38BDF8;--d:.7s">{θ₂,θ₃} .90</span><span style="width:1%;background:#8A99AD"></span><span style="width:9%;background:rgba(255,255,255,.18);color:#C9D3DF">.09</span></div></div>
+      <div class="mass"><span>m₃ · AWS T, H</span><div class="track"><span class="grow" style="width:88%;background:#FB7185;--d:.9s">{θ₃} .88</span><span style="width:4%;background:#8A99AD"></span><span style="width:8%;background:rgba(255,255,255,.18);color:#C9D3DF">.08</span></div></div>
+      <div class="eq sm">\[m_{1\oplus2}(A)=\frac{1}{1-K_{12}}\sum_{B\cap C=A}m_1(B)\,m_2(C)\]\[K_{12}=0.0265,\qquad m_{1\oplus2}(\{\theta_2,\theta_3\})=\cy{0.9846}\]</div>
+      <div class="note">Satellites agree it is raining. The station's own thermometer and hygrometer agree. Only the bucket disagrees.</div>
+      <div class="grid" style="grid-template-columns:1fr 1fr;gap:12px;margin-top:auto">
+        <div class="kpi" style="border-color:rgba(251,113,133,.45);background:rgba(251,113,133,.08)"><div class="micro">Belief · gauge stuck</div><div class="v rd" data-count="0.916" data-dec="3">0.916</div><div class="l">&gt; τ<sub>DST</sub> = 0.90 → fault proven</div>
+          <svg viewBox="0 0 300 14" style="width:100%;margin-top:8px"><rect width="300" height="8" y="3" rx="4" fill="rgba(255,255,255,.06)"/><rect width="274.8" height="8" y="3" rx="4" fill="#FB7185" class="grow" style="--d:1.2s"/><line x1="270" x2="270" y1="0" y2="14" stroke="#F3F6FA" stroke-width="2"/></svg></div>
+        <div class="kpi"><div class="micro">Plausibility</div><div class="v" data-count="0.999" data-dec="3">0.999</div><div class="l">→ <span class="tag rd" style="font-size:12px">RAIN_GAUGE_CLOGGED</span><br>impute R via co-kriged H-E</div></div>
+      </div>
+    </div>
+  </div>
+</main>
+</section>
+
+<!-- ================= 9 · ARCHITECTURE ================= -->
+<section class="slide" data-kicker="Architecture" data-title="Three-Tier Edge-to-Oracle Pipeline" data-rubric="3,5"
+  data-take="Cheap math runs <b>everywhere</b>; expensive math runs only <b>when needed</b>. Raw data is never deleted — only flagged with a reason.">
+<main class="canvas">
+  <div class="head"><div><div class="pills"><span class="pill green"><span class="dot"></span>Deployable today</span><span class="pill">O(W + d²) per record</span><span class="pill amber">1-byte EDGE_QC_BYTE</span></div>
+    <h2>From a ₹500 micro-controller <em>to geostationary orbit</em></h2></div></div>
+  <div class="glass fill" style="display:flex;flex-direction:column;padding:24px 28px;position:relative">
+    <div class="tier">
+      <div class="lab"><div class="t">Tier 3 · Spaceborne oracle</div><div class="n">INSAT-3DR/3DS + GPM IMERG</div><span class="pill cyan">1 – 15 min</span></div>
+      <div class="nodes">
+        <div class="node c"><b>INSAT H-E + IMERG</b><span>\(\text{CTT},\,R_{\text{HE}},\,R_{\text{IMERG}}\)</span></div><i class="arrow"></i>
+        <div class="node c"><b>Dempster–Shafer</b>\(\mathrm{Bel}(\{\theta_3\})\ge0.90\)</div><i class="arrow"></i>
+        <div class="node c"><b>Co-kriged imputation</b>block → point</div><i class="arrow"></i>
+        <div class="node c"><b>NCMRWF 4D-EnKF</b>Huber–Tukey VarQC</div><i class="arrow"></i>
+        <div class="node r"><b>Verified flood alert</b>BBMP · KSNDMC</div>
+      </div>
+    </div>
+    <div class="link" style="--c:#38BDF8"><i style="left:calc(268px + 8%)"></i><span style="left:calc(268px + 8%)">escalate only if conformal p<sub>t</sub> is small or channels conflict</span><i style="left:calc(268px + 66%)"></i><span style="left:calc(268px + 66%)">Bel(fault), imputed R</span></div>
+    <div class="tier">
+      <div class="lab"><div class="t">Tier 2 · Station &amp; watershed</div><div class="n">KSNDMC · BBMP ICCC</div><span class="pill amber">&lt; 500 ms</span></div>
+      <div class="nodes">
+        <div class="node a"><b>Robust MCD</b>\(D^2_{\mathrm{MCD}}(\mathbf e_t)>20.515\)</div><i class="arrow"></i>
+        <div class="node a"><b>Copula TE graph</b>root-cause node</div><i class="arrow"></i>
+        <div class="node a"><b>Takens + Vietoris–Rips</b>\(\beta_0,\ \beta_1\)</div><i class="arrow"></i>
+        <div class="node a"><b>Conformal martingale</b><span>\(S_t\ge1/\alpha\) router</span></div>
+      </div>
+    </div>
+    <div class="link" style="--c:#F59E0B"><i style="left:calc(268px + 8%)"></i><span style="left:calc(268px + 8%)">raw x<sub>t</sub> + EDGE_QC_BYTE over GPRS / MQTT</span><i style="left:calc(268px + 66%)"></i><span style="left:calc(268px + 66%)">residuals e<sub>t</sub> + KAN error</span></div>
+    <div class="tier">
+      <div class="lab"><div class="t">Tier 1 · Edge logger</div><div class="n">STM32 Cortex-M4 / ESP32-S3</div><span class="pill green">&lt; 5 ms · &lt; 10 KB SRAM</span></div>
+      <div class="nodes">
+        <div class="node"><b>AWS sensors</b>\(T,H,P,R,W\)</div><i class="arrow"></i>
+        <div class="node"><b>Thermo filter</b>\(\Phi_{\text{phys}}(\mathbf x_t)\)</div><i class="arrow"></i>
+        <div class="node"><b>Flatline</b>\(s^2(6)<10^{-6}\)</div><i class="arrow"></i>
+        <div class="node"><b>Fourier KAN-AD</b>INT8 · 5 KB</div><i class="arrow"></i>
+        <div class="node"><b>MAD + CUSUM</b>\(M>3.5,\ C^\pm>5\)</div><i class="arrow"></i>
+        <div class="node a"><b class="mono" style="font-size:14px">EDGE_QC_BYTE</b>raw kept + 1 byte</div>
+      </div>
+    </div>
+  </div>
+  <div class="glass" style="padding:16px 28px">
+    <div class="row" style="justify-content:space-between;margin-bottom:2px"><div class="micro">Unified decision rule</div><span class="tag gn">Cloudburst protection — true storms are never clipped</span></div>
+    <div class="eq xs" style="margin:4px 0">\[\hat y_t=\mathbb I\Big(\big[p_t\le\varepsilon_{\text{point}}\ \vee\ M^{\text{CTM}}_t\ge\tfrac{1}{\alpha_{\text{drift}}}\ \vee\ \min_i s^2_{t,i}(k)<10^{-6}\big]\ \wedge\ \gn{\neg\,\mathcal C_{\text{storm}}(\mathbf x_t,\mathbf y^{\text{sat}}_t)}\Big)\ \vee\ \mathbb I\big(\Phi_{\text{sat}}(\mathbf x_t,\mathbf y^{\text{sat}}_t)\ge\tau_{\text{DST}}\big)\]</div>
+    <div class="eq xs" style="margin:0">\[\gn{\mathcal C_{\text{storm}}}\iff\big(R_t\le x^{\text{GPD}}_{200\text{-yr}}\big)\wedge\big(\Phi_{\text{phys}}(\mathbf x_t)=0\big)\wedge\big(\text{CTT}_t<235\,\text{K}\ \vee\ R_{\text{HE},t}>5\ \text{mm/hr}\big)\]</div>
+  </div>
+</main>
+</section>
+
+<!-- ================= 10 · VALIDATION ================= -->
+<section class="slide" data-kicker="Validation" data-title="Benchmark &amp; Explainable Diagnostic Log" data-rubric="4,5"
+  data-take="Every flag ships with its <b>equation, score and threshold</b>. The jury, the field engineer and the flood officer can all audit it.">
+<main class="canvas">
+  <div class="head"><div><div class="pills"><span class="pill">N = 720 h · 58 injected faults</span><span class="pill">Chronological 60 / 20 / 20</span><span class="pill">Seed = 42</span><span class="pill amber">Baseline: 3σ + static rules</span></div>
+    <h2>Every reading carries a <em>certificate of trust</em></h2></div></div>
+  <div class="grid" style="grid-template-columns:1fr 360px">
+    <div class="glass" style="padding:16px 26px">
+      <div class="row" style="justify-content:space-between;margin-bottom:4px"><div class="micro">Baseline → proposed</div><div class="row" style="gap:16px;font-size:14px;color:var(--mute)"><span><span style="color:#8A99AD">●</span> 3σ baseline</span><span><span class="amb">●</span> proposed</span></div></div>
+      <div id="dumbbell"></div>
+    </div>
+    <div class="grid" style="grid-template-rows:1fr 1fr;gap:16px">
+      <div class="glass" style="display:flex;flex-direction:column;justify-content:center"><div class="micro">F₁-score</div><div style="font-size:84px;font-weight:200;line-height:1;letter-spacing:-.04em" class="amb" data-count="0.939" data-dec="3">0.939</div><div class="note">from 0.538 · <b>+0.401</b> absolute</div></div>
+      <div class="glass" style="display:flex;flex-direction:column;justify-content:center"><div class="micro">False-positive rate</div><div style="font-size:84px;font-weight:200;line-height:1;letter-spacing:-.04em" class="cy"><span data-count="0.45" data-dec="2">0.45</span><span style="font-size:40px">%</span></div><div class="note">from 1.51% · <b>3.4× fewer</b> false alarms</div></div>
+    </div>
+  </div>
+  <div class="glass fill" style="padding:14px 22px;display:flex;flex-direction:column">
+    <div class="micro" style="margin-bottom:8px">Explainable diagnostic log · prototype output</div>
+    <table class="log">
+      <tr><th>Timestamp</th><th>Observed</th><th>Expected baseline</th><th>Score vs threshold</th><th>Certificate</th></tr>
+      <tr><td class="mono">Day 04 · 03:00</td><td>T = 34.8 °C</td><td>20.4 °C</td><td class="mono">M<sub>t,T</sub> = 11.42 &gt; 3.5</td><td><span class="tag rd">TEMPORAL_SPIKE</span> night residual +14.4 °C</td></tr>
+      <tr><td class="mono">Day 09 · 14:00</td><td>T = 29.50 °C × 6 h</td><td>28.1 → 31.2 °C</td><td class="mono">s²(6) = 0.00 &lt; 10⁻⁶</td><td><span class="tag amb">FLATLINE_FAULT</span> frozen during heating ramp</td></tr>
+      <tr><td class="mono">Day 16 · 18:00</td><td>T = 28.9 °C</td><td>25.7 °C</td><td class="mono">C⁺ = 6.84 &gt; 5.0</td><td><span class="tag vi">CALIBRATION_DRIFT</span> +0.08 °C/hr over 40 h</td></tr>
+      <tr><td class="mono">Day 22 · 15:00</td><td>R = 38 mm, H = 28%</td><td>R = 0 mm, H = 54%</td><td class="mono">D²<sub>MCD</sub> = 34.8 &gt; 20.52</td><td><span class="tag cy">MULTIVARIATE_INCONSISTENCY</span> rain in dry air</td></tr>
+      <tr class="protect"><td class="mono">Day 26 · 16:00</td><td>R = 42 mm, H = 96%</td><td>R = 2 mm, H = 68%</td><td class="mono">D²<sub>MCD</sub> = 9.4 ≤ 20.52</td><td><span class="tag gn">VALID_EXTREME_WEATHER</span> protected · P −4.2 hPa</td></tr>
+    </table>
+    <div class="row" style="margin-top:auto;justify-content:space-between;border-top:1px solid var(--line);padding-top:14px">
+      <p style="font-size:21px;max-width:1100px">Every rainfall, temperature and wind reading Bengaluru's flood network acts on should carry <b>a mathematical certificate of trust</b>.</p>
+      <span class="pill amber" style="font-size:16px;padding:9px 18px"><span class="dot"></span>Thank you · Questions</span>
+    </div>
+  </div>
+</main>
+</section>
+
+</div>
+
+<div class="nav"><button id="prev" aria-label="Previous slide">‹</button><span id="count">1 / 10</span><button id="next" aria-label="Next slide">›</button><span>← → · F fullscreen · P print</span></div>
+
+<template id="dockTpl">
+  <aside class="dock glass">
+    <div class="pills"><span class="pill">MathX · ALLIANCE ONE 2026</span><span class="pill amber">SIH26073</span></div>
+    <div>
+      <div class="dock-num"><span class="n"></span><small>/ 10</small></div>
+      <div class="micro k" style="margin-top:10px"></div>
+      <div class="dock-title"></div>
+    </div>
+    <div class="take"></div>
+    <div class="station">
+      <div class="big">24.6°<sup>C</sup></div>
+      <span class="live"><i></i>QC LIVE</span>
+      <div class="s" style="grid-column:1/-1">Bengaluru AWS · 12.9716° N, 77.5946° E<br>z ≈ 920 m · 912.4 hPa · Δt = 15 min</div>
+      <svg viewBox="0 0 300 36" style="grid-column:1/-1;width:100%;height:36px"><path d="M0,24 C30,8 60,6 90,16 S150,32 180,22 S240,6 270,14 L300,18" fill="none" stroke="#F59E0B" stroke-width="2" opacity=".8"/><path d="M0,24 C30,8 60,6 90,16 S150,32 180,22 S240,6 270,14 L300,18 L300,36 L0,36Z" fill="rgba(245,158,11,.08)"/></svg>
+    </div>
+    <div class="rubric">
+      <div class="micro" style="margin-bottom:2px">Evaluation rubric</div>
+    </div>
+    <div class="dots"></div>
+  </aside>
+</template>
+
+<script>
+const RUBRIC=[["Problem & domain relevance",20],["Mathematical formulation",25],["Method & feasibility",20],["Validation & metrics",20],["Originality & clarity",20]];
+const TE=[[null,1.8644,1.6721,1.6652,1.7594,1.7139],[1.8644,null,1.6721,1.6652,1.7594,1.7139],[1.6343,1.6343,null,4.6498,5.0793,4.8836],[1.6140,1.6140,4.5843,null,4.7244,4.5319],[1.7110,1.7110,5.0867,4.7384,null,5.1411],[1.6274,1.6274,4.8915,4.5470,5.1519,null]];
+// [label, sub, baseline, proposed, axisMax, higherIsBetter, fmt]
+const BENCH=[["Precision","",.714,.948,1,1,v=>v.toFixed(3)],["Recall","",.431,.931,1,1,v=>v.toFixed(3)],["F₁-score","",.538,.939,1,1,v=>v.toFixed(3)],
+  ["False-positive rate","LOWER IS BETTER",1.51,.45,2,0,v=>v.toFixed(2)+"%"],["Detection delay","LOWER IS BETTER",14.5,2.1,16,0,v=>v.toFixed(1)+" h"],["F₁ at 15% missing","ROBUSTNESS",.41,.902,1,1,v=>v.toFixed(3)]];
+
+const slides=[...document.querySelectorAll('.slide')], N=slides.length, tpl=document.getElementById('dockTpl');
+slides.forEach((s,i)=>{
+  const d=tpl.content.firstElementChild.cloneNode(true);
+  d.querySelector('.n').textContent=String(i+1).padStart(2,'0');
+  d.querySelector('.k').textContent=String(i+1).padStart(2,'0')+' · '+s.dataset.kicker;
+  d.querySelector('.dock-title').innerHTML=s.dataset.title;
+  d.querySelector('.take').innerHTML=s.dataset.take;
+  const on=s.dataset.rubric.split(',').map(Number), r=d.querySelector('.rubric');
+  RUBRIC.forEach(([name,w],j)=>{const el=document.createElement('div');el.className='rub'+(on.includes(j+1)?' on':'');
+    el.innerHTML=`<span>${j+1}. ${name}</span><span class="w">${w}%</span><div class="bar"><i data-w="${on.includes(j+1)?100:22}"></i></div>`;r.appendChild(el)});
+  const dots=d.querySelector('.dots');
+  for(let j=0;j<N;j++){const b=document.createElement('b');b.className=j===i?'on':j<i?'done':'';b.onclick=()=>go(j);dots.appendChild(b)}
+  s.prepend(d);
+  s.querySelectorAll('.glass').forEach((g,j)=>g.style.setProperty('--i',j));
+});
+
+// heatmap
+const hm=document.getElementById('hm');
+hm.innerHTML='<div class="h"></div>'+[1,2,3,4,5,6].map(j=>`<div class="h">D${j}</div>`).join('');
+const lerp=(a,b,t)=>a.map((x,i)=>Math.round(x+(b[i]-x)*t));
+TE.forEach((row,i)=>{hm.insertAdjacentHTML('beforeend',`<div class="h">D${i+1}</div>`);
+  row.forEach((v,j)=>{if(v==null){hm.insertAdjacentHTML('beforeend','<div class="c" style="background:rgba(255,255,255,.03);color:#5e6b7b">—</div>');return}
+    const t=Math.min(1,Math.max(0,(v-1.6)/3.6)), c=t<.6?lerp([22,39,58],[56,189,248],t/.6):lerp([56,189,248],[245,158,11],(t-.6)/.4);
+    const hot=(i===4&&(j===2||j===3))||(i===2&&j===4)||(i===3&&j===4);
+    hm.insertAdjacentHTML('beforeend',`<div class="c fade${hot?' hot':''}" style="--d:${(.4+(i*6+j)*.025).toFixed(2)}s;background:rgba(${c},${.25+.6*t})">${v.toFixed(4)}</div>`)})});
+
+// dumbbell
+document.getElementById('dumbbell').innerHTML=BENCH.map(([l,sub,b,p,mx,hi,f],i)=>{
+  const bx=b/mx*100, px=p/mx*100, lo=Math.min(bx,px), w=Math.abs(px-bx);
+  return `<div class="db"><div class="name">${l}${sub?`<small>${sub}</small>`:''}</div>
+  <div class="trk"><div class="seg grow" style="left:${lo}%;width:${w}%;--d:${.5+i*.12}s;${hi?'':'background:linear-gradient(270deg,rgba(138,153,173,.5),var(--amber))'}"></div><i class="p b" style="left:${bx}%"></i><i class="p n pop" style="left:${px}%;--d:${1+i*.12}s"></i></div>
+  <div class="vals">${f(b)} → <b>${f(p)}</b></div></div>`}).join('');
+
+// navigation
+let cur=0;
+const stage=document.getElementById('stage');
+function fit(){const s=Math.min(innerWidth/1920,innerHeight/1080)*.97;stage.style.transform=`translate(-50%,-50%) scale(${s})`}
+function count(el){const to=+el.dataset.count,dec=+(el.dataset.dec||0),t0=performance.now(),dur=1400;
+  (function tick(t){const k=Math.min(1,(t-t0)/dur),e=1-Math.pow(1-k,3),v=to*e;
+    el.textContent=dec?v.toFixed(dec):Math.round(v).toLocaleString('en-IN');if(k<1)requestAnimationFrame(tick)})(t0)}
+function go(i){
+  cur=Math.max(0,Math.min(N-1,i));
+  slides.forEach((s,j)=>{const a=j===cur;s.classList.toggle('active',a);
+    s.querySelectorAll('.rub .bar i').forEach(b=>b.style.width=a?b.dataset.w+'%':'0')});
+  slides[cur].querySelectorAll('[data-count]').forEach(count);
+  document.getElementById('progress').style.width=((cur+1)/N*100)+'%';
+  document.getElementById('count').textContent=`${cur+1} / ${N}`;
+  history.replaceState(null,'','#'+(cur+1));
+}
+addEventListener('keydown',e=>{
+  if(['ArrowRight','PageDown',' ','Enter'].includes(e.key)){e.preventDefault();go(cur+1)}
+  else if(['ArrowLeft','PageUp','Backspace'].includes(e.key)){e.preventDefault();go(cur-1)}
+  else if(e.key==='Home')go(0); else if(e.key==='End')go(N-1);
+  else if(e.key==='f'||e.key==='F'){document.fullscreenElement?document.exitFullscreen():document.documentElement.requestFullscreen()}
+  else if(e.key==='p'||e.key==='P')print();
+});
+document.getElementById('prev').onclick=()=>go(cur-1);
+document.getElementById('next').onclick=()=>go(cur+1);
+addEventListener('resize',fit);
+addEventListener('beforeprint',()=>{slides.forEach(s=>s.querySelectorAll('.rub .bar i').forEach(b=>b.style.width=b.dataset.w+'%'));document.querySelectorAll('[data-count]').forEach(el=>{const dec=+(el.dataset.dec||0);el.textContent=dec?(+el.dataset.count).toFixed(dec):(+el.dataset.count).toLocaleString('en-IN')})});
+fit();go((parseInt(location.hash.slice(1))||1)-1);
+
+addEventListener('DOMContentLoaded',()=>{
+  renderMathInElement(document.body,{delimiters:[{left:'\\[',right:'\\]',display:true},{left:'\\(',right:'\\)',display:false}],throwOnError:false,
+    macros:{"\\amb":"\\textcolor{##F59E0B}{#1}","\\cy":"\\textcolor{##38BDF8}{#1}","\\rd":"\\textcolor{##FB7185}{#1}","\\gn":"\\textcolor{##34D399}{#1}"}});
+});
+</script>
+</body>
+</html>

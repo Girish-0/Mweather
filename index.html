@@ -1,0 +1,703 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Certificates of Trust</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@200;300;400;500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<style>
+:root{--txt:#C9D3DF;--ink:#F3F6FA;--dim:#8A99AD;--cyan:#38BDF8;--amber:#F59E0B;--rose:#FB7185;--green:#34D399;--line:rgba(255,255,255,.12)}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{background:#05070b;color:var(--txt);font:400 14px/1.45 Inter,system-ui,sans-serif;padding:14px;overflow:hidden;-webkit-font-smoothing:antialiased}
+.mono{font-family:"JetBrains Mono",monospace}
+a{color:var(--txt);cursor:pointer;text-decoration:none}
+a:hover{color:var(--ink)}
+button,.btn{font:inherit;cursor:pointer;color:var(--ink);border:0;background:none}
+h3{font-size:15px;font-weight:400;color:var(--ink);white-space:nowrap}
+
+/* storm-cloud card */
+.app{height:calc(100vh - 28px);border-radius:36px;overflow:hidden;position:relative;display:grid;grid-template-columns:300px minmax(0,1fr);gap:18px;padding:18px;
+  background:
+    radial-gradient(60% 45% at 72% 8%,rgba(150,170,200,.38),transparent 70%),
+    radial-gradient(40% 35% at 40% 22%,rgba(110,128,158,.30),transparent 70%),
+    radial-gradient(55% 40% at 92% 55%,rgba(70,86,112,.45),transparent 70%),
+    radial-gradient(70% 50% at 15% 95%,rgba(40,58,84,.6),transparent 70%),
+    radial-gradient(50% 30% at 55% 70%,rgba(20,28,42,.8),transparent 70%),
+    linear-gradient(170deg,#3a4558 0%,#1c2433 38%,#0d121b 72%,#080b11 100%);
+  box-shadow:0 0 0 1px rgba(255,255,255,.08),0 40px 120px rgba(0,0,0,.7)}
+.app::before{content:"";position:absolute;inset:0;pointer-events:none;opacity:.10;mix-blend-mode:overlay;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+.app>*{position:relative}
+.glass{background:rgba(255,255,255,.06);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border:1px solid var(--line);border-radius:28px}
+.pill{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:999px;padding:5px 13px;font-size:13px;color:var(--txt);background:rgba(255,255,255,.06);white-space:nowrap}
+.pill.white{background:#fff;color:#0b1015;border-color:#fff;font-weight:500}
+.chip{white-space:nowrap;font-size:12px;border-radius:999px;padding:3px 10px;background:rgba(255,255,255,.08);color:var(--txt)}
+.row{display:flex;align-items:center;justify-content:space-between;gap:10px}
+
+/* sidebar */
+.side{display:flex;flex-direction:column;gap:16px;padding:24px 20px;min-height:0;overflow:auto;scrollbar-width:none}
+.logo{font-size:21px;font-weight:300;color:var(--ink);letter-spacing:-.01em}
+.logo svg{display:block;margin-top:2px}
+.logo small{display:block;font-size:11px;color:var(--dim);letter-spacing:.12em;text-transform:uppercase;margin-top:4px}
+.card{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:22px;padding:16px}
+.gaugebox{position:relative;margin:8px 0 4px}
+#gauge{width:100%;display:block;overflow:visible}
+#hlabel{position:absolute;transform:translate(-50%,14px)}
+.card a.link{font-size:13px;color:var(--dim);display:inline-block;margin-top:26px}
+#map{width:190px;height:190px;border-radius:50%;margin:14px auto 12px;overflow:hidden;background:#0b1015;border:1px solid var(--line);box-shadow:0 0 0 6px rgba(255,255,255,.03),0 0 40px rgba(56,189,248,.12);display:grid;place-items:center;color:var(--dim);font-size:12px;text-align:center}
+.station{text-align:center}
+.station .pill{max-width:100%;overflow:hidden;text-overflow:ellipsis}
+.attr{display:block;font-size:10px;color:var(--dim);margin-top:8px}
+
+/* main */
+main{display:grid;grid-template-rows:auto minmax(0,1fr) auto;gap:16px;min-height:0;min-width:0}
+.top{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.loc{font-size:15px;color:var(--ink);display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.loc .chip.inj{background:rgba(245,158,11,.15);color:#FCD38A;border:1px solid rgba(245,158,11,.45)}
+.actions{display:flex;align-items:center;gap:10px;position:relative}
+.round{width:44px;height:44px;border-radius:50%!important;display:grid;place-items:center}
+.btn.pill{padding:11px 20px;font-size:14px}
+.pop{position:absolute;right:0;top:54px;padding:14px;display:none;gap:8px;z-index:900;background:rgba(14,19,28,.9)}
+.pop.on{display:flex}
+.pop input{background:rgba(255,255,255,.08);border:1px solid var(--line);border-radius:12px;color:var(--ink);padding:8px 10px;font:inherit;color-scheme:dark}
+
+.mid{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:22px;min-height:0}
+.hero{padding:6px 0 0 8px;min-width:0;display:flex;flex-direction:column;justify-content:center}
+.valrow{display:flex;align-items:flex-start;gap:18px}
+.big{font-size:clamp(96px,11vw,176px);font-weight:200;line-height:.86;letter-spacing:-.05em;color:var(--ink);background:linear-gradient(180deg,#fff,#a9b8ca);-webkit-background-clip:text;background-clip:text;color:transparent}
+.big small{font-size:.22em;letter-spacing:0;font-weight:300}
+.hl{display:flex;flex-direction:column;gap:8px;margin-top:18px}
+.when{color:var(--dim);font-size:14px;margin:14px 0 6px}
+h1{font-size:clamp(38px,4.4vw,64px);font-weight:300;line-height:1.06;letter-spacing:-.025em;color:var(--ink)}
+h1 span{display:block}
+h1 .d{opacity:.55}
+.chpills{display:flex;gap:8px;margin-top:22px;flex-wrap:wrap}
+.chpills button{border:1px solid var(--line);border-radius:999px;padding:7px 16px;background:rgba(255,255,255,.05);color:var(--txt);font-size:13px}
+.chpills button.on{background:#fff;color:#0b1015;border-color:#fff}
+.err{margin-top:18px;padding:16px;border-radius:18px;border:1px solid rgba(251,113,133,.45);background:rgba(251,113,133,.08);color:#FDB4C0;max-width:560px}
+.err .pill{margin-top:10px;cursor:pointer}
+
+.right{display:flex;flex-direction:column;gap:12px;min-height:0;overflow:auto;scrollbar-width:none;padding-right:2px}
+.right::-webkit-scrollbar,.side::-webkit-scrollbar{display:none}
+.tag{font-size:14px;font-weight:300;color:var(--txt);line-height:1.5}
+.cards{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.fc{padding:14px;cursor:pointer;transition:transform .15s,background .15s;min-width:0}
+.fc:hover{transform:translateY(-2px);background:rgba(255,255,255,.09)}
+.fc .ic{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font-size:14px;margin-bottom:8px}
+.fc .v{font-size:26px;font-weight:200;color:var(--ink);line-height:1.1;white-space:nowrap}
+.fc .r{font-family:"JetBrains Mono",monospace;font-size:10px;margin-top:4px;word-break:break-all}
+.fc .t{font-size:11px;color:var(--dim)}
+.fc.solo{grid-column:1/-1;cursor:default}
+.toggle{display:flex;align-items:center;justify-content:space-between;cursor:pointer;padding:4px 2px}
+.toggle small{display:block;color:var(--dim);font-size:11px}
+.toggle input{display:none}
+.toggle i{width:46px;height:26px;border-radius:99px;background:rgba(255,255,255,.12);position:relative;transition:.2s;flex:none}
+.toggle i::after{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:.2s}
+.toggle input:checked+i{background:var(--amber)}
+.toggle input:checked+i::after{left:23px}
+.metrics{padding:14px 16px;font-size:12.5px}
+.metrics table{width:100%;border-collapse:collapse}
+.metrics th{font-weight:400;color:var(--dim);text-align:right;padding:3px 0;font-size:11px}
+.metrics th:first-child,.metrics td:first-child{text-align:left}
+.metrics td{padding:3px 0;text-align:right;font-family:"JetBrains Mono",monospace;font-size:12px;border-top:1px solid rgba(255,255,255,.05)}
+.metrics td:first-child{font-family:Inter,sans-serif;color:var(--txt)}
+.metrics td.win{color:var(--cyan)}
+.metrics .cap{color:var(--dim);font-size:11px;margin-top:8px;line-height:1.4}
+.muted{color:var(--dim)}
+
+.timeline{padding:6px 18px 4px;height:214px}
+#wave{width:100%;height:200px;display:block;cursor:crosshair}
+#wave .curve{fill:none;stroke:#fff;stroke-width:2.2;filter:drop-shadow(0 0 6px rgba(255,255,255,.45))}
+#wave .expc{fill:none;stroke:rgba(56,189,248,.55);stroke-width:1.2;stroke-dasharray:3 4}
+#wave text{fill:var(--txt);font-family:Inter,sans-serif}
+#wave .day{font-size:13px;fill:var(--dim)}
+#wave .day.on{fill:var(--ink)}
+#wave .mean{font-size:28px;font-weight:200;fill:var(--ink)}
+#wave .fd{cursor:pointer;stroke:#0b1015;stroke-width:1.5}
+
+/* drawer */
+.drawer{position:fixed;top:14px;right:14px;bottom:14px;width:min(1000px,94vw);z-index:1000;transform:translateX(110%);transition:transform .35s cubic-bezier(.2,.8,.2,1);
+  background:rgba(12,17,25,.92);backdrop-filter:blur(18px);border:1px solid var(--line);border-radius:28px;display:flex;flex-direction:column;padding:22px}
+.drawer.on{transform:none}
+.drawer header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.drawer h2{font-weight:300;font-size:24px;color:var(--ink)}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+.chips button{border:1px solid var(--line);border-radius:99px;padding:4px 11px;font-family:"JetBrains Mono",monospace;font-size:11px;color:var(--txt)}
+.chips button.on{background:#fff;color:#0b1015}
+.tbl{overflow:auto;flex:1}
+.tbl table{width:100%;border-collapse:collapse;font-size:12.5px}
+.tbl th{position:sticky;top:0;background:#121925;text-align:left;font-weight:400;color:var(--dim);padding:8px;font-size:11px;text-transform:uppercase;letter-spacing:.06em}
+.tbl td{padding:8px;border-top:1px solid rgba(255,255,255,.06);vertical-align:top}
+.tbl tr{cursor:pointer}
+.tbl tbody tr:hover{background:rgba(255,255,255,.04)}
+.tbl td.m{font-family:"JetBrains Mono",monospace;white-space:nowrap}
+
+.tip{position:fixed;z-index:1100;pointer-events:none;max-width:360px;padding:12px 14px;border-radius:16px;background:rgba(12,17,25,.94);border:1px solid var(--line);font-size:12px;display:none;box-shadow:0 20px 50px rgba(0,0,0,.5)}
+.tip .c+.c{margin-top:10px;padding-top:10px;border-top:1px solid var(--line)}
+.tip b{font-family:"JetBrains Mono",monospace;font-weight:500}
+.leaflet-container{background:#0b1015}
+.leaflet-tile-pane{filter:invert(1) hue-rotate(180deg) brightness(.85) contrast(.9) saturate(.25)}
+.leaflet-tooltip{background:rgba(12,17,25,.9);color:var(--ink);border:1px solid var(--line);font:12px Inter,sans-serif}
+
+@media (max-width:1180px){.mid{grid-template-columns:minmax(0,1fr) 300px}.app{grid-template-columns:260px minmax(0,1fr)}}
+@media (max-width:980px){
+  body{overflow:auto;padding:8px}
+  .app{height:auto;grid-template-columns:1fr;border-radius:24px;padding:12px}
+  .mid{grid-template-columns:1fr}
+  .right{overflow:visible}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="side glass">
+    <div class="logo">Certificates of Trust
+      <svg width="190" height="12" viewBox="0 0 190 12"><path d="M2 10 Q95 -2 188 10" fill="none" stroke="#38BDF8" stroke-width="1.2" stroke-linecap="round" opacity=".8"/></svg>
+      <small>SIH26073 · AWS anomaly detection</small>
+    </div>
+    <section class="card">
+      <div class="row"><h3>Station Health</h3><span class="chip" id="rate">—</span></div>
+      <div class="gaugebox">
+        <svg id="gauge" viewBox="0 0 240 110">
+          <defs><linearGradient id="gg" x1="0" x2="1"><stop offset="0" stop-color="#38BDF8"/><stop offset=".55" stop-color="#F59E0B"/><stop offset="1" stop-color="#FB7185"/></linearGradient></defs>
+          <path d="M14 96 C70 98 92 72 122 60 S192 22 226 12" fill="none" stroke="rgba(255,255,255,.08)" stroke-width="10" stroke-linecap="round"/>
+          <path id="garc" d="M14 96 C70 98 92 72 122 60 S192 22 226 12" fill="none" stroke="url(#gg)" stroke-width="3" stroke-linecap="round"/>
+          <circle id="gdot" r="7" fill="#fff" cx="14" cy="96" style="filter:drop-shadow(0 0 6px #fff)"/>
+        </svg>
+        <span class="pill white" id="hlabel">—</span>
+      </div>
+      <a class="link" id="openLog">See diagnostic log ›</a>
+    </section>
+    <section class="card station">
+      <h3 style="text-align:left">Select Station</h3>
+      <div id="map"></div>
+      <span class="pill" id="stName">—</span>
+      <small class="attr">Map © OpenStreetMap contributors · Data Open-Meteo (CC BY 4.0)</small>
+    </section>
+  </aside>
+
+  <main>
+    <header class="top">
+      <div class="loc"><span>📍</span><span id="loc">Fetching Open-Meteo…</span></div>
+      <div class="actions">
+        <button class="round glass" id="searchBtn" title="Jump to an hour"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></button>
+        <div class="pop glass" id="pop"><input type="datetime-local" id="jump" step="3600"><button class="pill" id="go">Go</button></div>
+        <label class="btn pill">Upload CSV<input type="file" id="csv" accept=".csv,text/csv" hidden></label>
+        <button class="btn pill white" id="dl">Download QC Report</button>
+      </div>
+    </header>
+
+    <section class="mid">
+      <div class="hero">
+        <div class="valrow"><div class="big" id="big">—</div><div class="hl"><span class="pill" id="hi">H —</span><span class="pill" id="lo">L —</span></div></div>
+        <div class="when" id="when"></div>
+        <h1 id="verdict"><span>Loading real data</span><span class="d">from Open-Meteo</span></h1>
+        <div class="chpills" id="chp"></div>
+        <div class="err" id="err" hidden></div>
+      </div>
+      <div class="right">
+        <p class="tag">Every reading Bengaluru's flood network acts on should carry a mathematical certificate of trust.</p>
+        <div class="row"><h3>Recent Flags</h3><a id="seeAll" class="muted">See All ›</a></div>
+        <div class="cards" id="recent"></div>
+        <label class="toggle"><span>Inject Faults<small>mulberry32 · SEED 42 · test window only</small></span><input type="checkbox" id="inj"><i></i></label>
+        <div class="metrics glass" id="metrics"></div>
+      </div>
+    </section>
+
+    <section class="timeline glass"><svg id="wave"></svg></section>
+  </main>
+</div>
+
+<div class="drawer" id="drawer">
+  <header><h2>Diagnostic log</h2><button class="pill" id="closeLog">Close ✕</button></header>
+  <div class="chips" id="chips"></div>
+  <div class="tbl"><table><thead><tr><th>Timestamp</th><th>Ch</th><th>Observed</th><th>Expected</th><th>Score vs threshold</th><th>Reason code</th><th>Explanation</th></tr></thead><tbody id="logBody"></tbody></table></div>
+</div>
+<div class="tip" id="tip"></div>
+
+<!-- Detection core: pure functions, no DOM. metrics.mjs evals this block in Node. -->
+<script id="core">
+const CH = ['T','H','P','R','W'], UNIT = ['°C','%','hPa','mm','m/s'], NAME = ['Temperature','Humidity','Pressure','Rainfall','Wind'];
+const BOUNDS = [[-5,50],[0,100],[880,940],[0,150],[0,50]];
+const K_FLAT = 6, EPS_FLAT = 1e-6, TAU_M = 3.5, KAPPA = 0.5, H_CUSUM = 5, CHI2_5_999 = 20.515, GAP_MAX = 3, SEED = 42;
+const VAL_FPR = 0.01, LADDER_M = [3.5,4,4.5,5,6,7,8,10,12], LADDER_H = [5,7.5,10,15,20,30,40,60,80], LADDER_D = [20.515,25,30,40,50,60,80,100,150,200];
+const STEP_MAX = [4,20,3,50,10];   // baseline step-change limits per hour
+const WD = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+const MO = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+const OM_URL = (lat,lon) => `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=temperature_2m,relative_humidity_2m,surface_pressure,precipitation,wind_speed_10m&wind_speed_unit=ms&past_days=31&forecast_days=1&timezone=Asia%2FKolkata`;
+
+// timestamps are IST wall-clock stored as if UTC, so getUTC* gives local IST fields
+const hourOf = ts => new Date(ts).getUTCHours();
+const fmtTime = ts => { const d = new Date(ts); return `${WD[d.getUTCDay()].slice(0,3)} ${d.getUTCDate()} ${MO[d.getUTCMonth()].slice(0,3)} · ${String(d.getUTCHours()).padStart(2,'0')}:00`; };
+const fv = (v,i) => v == null || isNaN(v) ? '—' : `${(+v).toFixed(i === 1 ? 0 : 1)} ${UNIT[i]}`;
+const sg = v => (v >= 0 ? '+' : '−') + Math.abs(v).toFixed(1);
+const tod = h => h < 5 || h >= 20 ? 'Night' : h < 12 ? 'Morning' : h < 17 ? 'Afternoon' : 'Evening';
+const isFault = f => f.reason !== 'VALID_EXTREME_WEATHER';
+const median = a => { const s = a.filter(v => v != null && !isNaN(v)).sort((x,y) => x-y), n = s.length; return n ? (n % 2 ? s[n>>1] : (s[n/2-1] + s[n/2]) / 2) : null; };
+
+function mulberry32(a){ return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+
+function parseOpenMeteo(j){
+  const h = j.hourly, now = Date.now() + 19800000;   // "now" in IST wall-clock
+  const rows = [];
+  h.time.forEach((t,i) => { const ts = Date.parse(t + 'Z'); if (ts <= now) rows.push({ ts, x: [h.temperature_2m[i], h.relative_humidity_2m[i], h.surface_pressure[i], h.precipitation[i], h.wind_speed_10m[i]] }); });
+  return rows;
+}
+function parseCSV(txt){
+  const L = txt.trim().split(/\r?\n/), head = L[0].split(',').map(s => s.trim().replace(/^"|"$/g,'').toLowerCase());
+  const idx = ['time','t','h','p','r','w'].map(k => head.indexOf(k));
+  if (idx.some(i => i < 0)) throw Error('CSV header must contain columns time,T,H,P,R,W');
+  return L.slice(1).map(l => { const c = l.split(',').map(s => s.trim().replace(/^"|"$/g,''));
+    return { ts: Date.parse(c[idx[0]].replace(' ','T').slice(0,16) + 'Z'), x: idx.slice(1).map(i => { const v = parseFloat(c[i]); return isNaN(v) ? null : v; }) };
+  }).filter(r => !isNaN(r.ts));
+}
+// regular hourly grid; missing hours become all-null rows
+function toGrid(rows){
+  if (!rows.length) throw Error('No rows in data');
+  const m = new Map(rows.map(r => [Math.round(r.ts / 3600e3), r.x])), hs = [...m.keys()];
+  const a = Math.min(...hs), b = Math.max(...hs), out = [];
+  for (let h = a; h <= b; h++) out.push({ ts: h * 3600e3, x: m.get(h) || [null,null,null,null,null] });
+  return out;
+}
+
+function inv(A){   // Gauss-Jordan with partial pivoting
+  const n = A.length, M = A.map((r,i) => [...r, ...r.map((_,j) => +(i === j))]);
+  for (let c = 0; c < n; c++){
+    let p = c; for (let r = c+1; r < n; r++) if (Math.abs(M[r][c]) > Math.abs(M[p][c])) p = r;
+    [M[c], M[p]] = [M[p], M[c]];
+    const d = M[c][c]; if (Math.abs(d) < 1e-15) throw Error('Singular covariance');
+    for (let j = 0; j < 2*n; j++) M[c][j] /= d;
+    for (let r = 0; r < n; r++) if (r !== c){ const f = M[r][c]; for (let j = 0; j < 2*n; j++) M[r][j] -= f * M[c][j]; }
+  }
+  return M.map(r => r.slice(n));
+}
+
+function detect(rows){
+  const n = rows.length; if (n < 72) throw Error(`Need at least 72 hourly rows (got ${n})`);
+  const nCal = Math.floor(n * .6), hr = t => hourOf(rows[t].ts);
+  const X = CH.map((_,i) => rows.map(r => r.x[i]));
+  const F = [], seen = new Set();
+  const add = (t,c,reason,o) => { const k = `${t}|${c}|${reason}`; if (seen.has(k)) return; seen.add(k); F.push({ t, c, reason, det: t, ts: rows[t].ts, ...o }); };
+
+  // Stage 2 decomposition: trailing 24h median trend + per-hour seasonal (calibration only)
+  const trend = X.map(s => s.map((_,t) => median(s.slice(Math.max(0,t-23), t+1))));
+  const seas = X.map((s,i) => { const b = Array.from({length:24}, () => []);
+    for (let t = 0; t < nCal; t++) if (s[t] != null && trend[i][t] != null) b[hr(t)].push(s[t] - trend[i][t]);
+    return b.map(v => median(v) ?? 0); });
+  const exp = X.map((s,i) => s.map((_,t) => trend[i][t] == null ? null : trend[i][t] + seas[i][hr(t)]));
+  const E = X.map((s,i) => s.map((v,t) => v == null || exp[i][t] == null ? null : v - exp[i][t]));
+
+  // gaps: <=3h interpolate the residual, >3h communication loss (CUSUM reset below)
+  const imputed = X.map(() => Array(n).fill(false)), lost = X.map(() => Array(n).fill(0));
+  X.forEach((s,i) => { for (let t = 0; t < n;){
+    if (s[t] != null){ t++; continue; }
+    let b = t; while (b < n && s[b] == null) b++;
+    if (b - t <= GAP_MAX && t > 0 && b < n && E[i][t-1] != null && E[i][b] != null)
+      for (let j = t; j < b; j++){ E[i][j] = E[i][t-1] + (E[i][b] - E[i][t-1]) * (j-t+1) / (b-t+1); imputed[i][j] = true; }
+    else for (let j = t; j < b; j++) lost[i][j] = b - t;
+    t = b; } });
+  for (let t = 0; t < n; t++){ const ch = CH.filter((_,i) => lost[i][t]); if (!ch.length) continue;
+    const L = Math.max(...CH.map((_,i) => lost[i][t]));
+    add(t, ch.length === 1 ? CH.indexOf(ch[0]) : -1, 'COMMUNICATION_LOSS', { val: null, exp: null, sym: 'gap', score: L, thr: GAP_MAX, cmp: '>', unit: 'h',
+      text: `No data from ${ch.join(', ')} for ${L}h (> ${GAP_MAX}h): not interpolated, CUSUM reset on recovery` }); }
+
+  // Stage 1: physical bounds + rolling zero-variance (never on rain)
+  X.forEach((s,i) => s.forEach((v,t) => { const [lo,hi] = BOUNDS[i];
+    if (v != null && (v < lo || v > hi)) add(t, i, 'OUT_OF_RANGE', { val: v, exp: exp[i][t], sym: 'x', score: v, thr: `[${lo}, ${hi}]`, cmp: '∉',
+      text: `${NAME[i]} ${fv(v,i)} is outside physical bounds [${lo}, ${hi}] ${UNIT[i]}` }); }));
+  [0,1,2,4].forEach(i => { const s = X[i];
+    for (let t = K_FLAT-1; t < n; t++){
+      const w = s.slice(t-K_FLAT+1, t+1);
+      if (w.some(v => v == null) || (i === 4 && w.some(v => v <= 0))) continue;
+      const m = w.reduce((a,b) => a+b) / K_FLAT, v2 = w.reduce((a,b) => a + (b-m)**2, 0) / (K_FLAT-1);
+      if (v2 < EPS_FLAT) for (let j = t-K_FLAT+1; j <= t; j++) add(j, i, 'FLATLINE_FAULT', { det: t, val: s[j], exp: exp[i][j], sym: 's²', score: v2, thr: EPS_FLAT, cmp: '<',
+        text: `${NAME[i]} stuck at ${fv(s[j],i)} for ${K_FLAT}h: rolling variance ${v2.toExponential(1)} < 1e-6` });
+    } });
+
+  // Stage 2: modified Z (MAD from calibration) + two-sided CUSUM
+  const cal = i => E[i].slice(0,nCal).filter((v,t) => v != null && !imputed[i][t]);
+  const med = E.map((_,i) => median(cal(i)) ?? 0), mad = E.map((_,i) => median(cal(i).map(v => Math.abs(v - med[i]))) || 0);
+  const Z = E.map((e,i) => e.map(v => v == null || !mad[i] ? null : 0.6745 * (v - med[i]) / mad[i]));
+  // validation split (60–80%) tunes thresholds: spec value is the floor, raised only until validation false-alarm rate <= 1%
+  const nVal = Math.floor(n * .8), tune = (ladder, rateAt) => ladder.find(v => rateAt(v) <= VAL_FPR) ?? ladder.at(-1);
+  const valRate = hit => { let k = 0; for (let t = nCal; t < nVal; t++) if (hit(t)) k++; return k / (nVal - nCal); };
+  const tauM = Z.map((z,i) => mad[i] ? tune(LADDER_M, tau => valRate(t => z[t] != null && !imputed[i][t] && Math.abs(z[t]) > tau)) : null);
+  const cusum = (i, h) => {   // alarm hours {t, s0 = estimated change point, C, dir}; accumulator resets after each alarm
+    const z = Z[i], out = []; let cp = 0, cm = 0, sp = 0, sm = 0;
+    for (let t = 0; t < n; t++){
+      if (lost[i][t]){ cp = cm = 0; sp = sm = t+1; continue; }
+      if (z[t] == null || imputed[i][t]) continue;
+      const zc = Math.max(-TAU_M, Math.min(TAU_M, z[t]));   // a lone spike is Stage 2a's job; clip so it can't fake a drift
+      cp = Math.max(0, cp + zc - KAPPA); cm = Math.max(0, cm - zc - KAPPA);
+      if (!cp) sp = t+1; if (!cm) sm = t+1;
+      if (cp > h){ out.push({ t, s0: sp, C: cp, dir: 'upward' }); cp = 0; sp = t+1; }
+      if (cm > h){ out.push({ t, s0: sm, C: cm, dir: 'downward' }); cm = 0; sm = t+1; }
+    }
+    return out; };
+  const alarmRows = al => new Set(al.map(a => a.t));
+  const hC = Z.map((_,i) => mad[i] ? tune(LADDER_H, h => { const s = alarmRows(cusum(i, h)); return valRate(t => s.has(t)); }) : null);
+
+  Z.forEach((z,i) => z.forEach((v,t) => { if (v == null || imputed[i][t] || Math.abs(v) <= tauM[i]) return;
+    add(t, i, 'TEMPORAL_SPIKE', { val: X[i][t], exp: exp[i][t], sym: 'M', score: Math.abs(v), thr: tauM[i], cmp: '>',
+      text: `${tod(hr(t))} ${NAME[i].toLowerCase()} residual ${sg(E[i][t])} ${UNIT[i]} exceeds ${tauM[i]}·MAD limit (MAD ${mad[i].toFixed(2)} ${UNIT[i]})` }); }));
+  Z.forEach((_,i) => { if (!mad[i]) return;
+    cusum(i, hC[i]).forEach(({ s0, t, C, dir }) => { if (X[i][t] != null)
+      add(t, i, 'CALIBRATION_DRIFT', { val: X[i][t], exp: exp[i][t], sym: dir === 'upward' ? 'C⁺' : 'C⁻', score: C, thr: hC[i], cmp: '>',
+        text: `${NAME[i]} residuals carry a persistent ${dir} bias since ${fmtTime(rows[s0].ts)}: CUSUM ${C.toFixed(2)} > h = ${hC[i]}` }); }); });
+
+  // Stage 3: Mahalanobis on residuals, covariance from clean calibration rows
+  const full = t => E.every((e,i) => e[t] != null && !imputed[i][t]);
+  const calRows = []; for (let t = 0; t < nCal; t++) if (full(t) && Z.every(z => z[t] == null || Math.abs(z[t]) < TAU_M)) calRows.push(t);
+  let Si = null, tauD = CHI2_5_999;
+  const D2 = Array(n).fill(null);
+  if (calRows.length > 10){
+    const S = CH.map(() => CH.map(() => 0));
+    calRows.forEach(t => { const d = E.map((e,i) => e[t] - med[i]); S.forEach((r,a) => r.forEach((_,b) => r[b] += d[a] * d[b])); });
+    S.forEach((r,a) => { r.forEach((_,b) => r[b] /= calRows.length - 1); r[a] += 1e-6; });   // tiny ridge: rain residual may be all-zero
+    Si = inv(S);
+    for (let t = 0; t < n; t++) if (full(t)){ const d = E.map((e,i) => e[t] - med[i]); D2[t] = d.reduce((s,da,a) => s + da * d.reduce((u,db,b) => u + Si[a][b] * db, 0), 0); }
+    tauD = tune(LADDER_D, v => valRate(t => D2[t] > v));
+  }
+  for (let t = 0; t < n; t++){
+    if (X[3][t] > 10 && E[1][t] != null && E[1][t] < -15) add(t, -1, 'MULTIVARIATE_INCONSISTENCY', { val: X[3][t], valC: 3, exp: null, sym: 'e_H', score: E[1][t], thr: -15, cmp: '<',
+      text: `Rain ${fv(X[3][t],3)} but humidity residual ${sg(E[1][t])} %: heavy rain in dry air is physically inconsistent` });
+    if (D2[t] == null) continue;
+    const d = E.map((e,i) => e[t] - med[i]);
+    if (D2[t] > tauD){ const top = d.map((v,i) => [Math.abs(v * Si[i].reduce((u,s,b) => u + s * d[b], 0)), i]).sort((a,b) => b[0]-a[0])[0][1];
+      add(t, -1, 'MULTIVARIATE_INCONSISTENCY', { val: X[top][t], valC: top, exp: exp[top][t], sym: 'D²', score: D2[t], thr: tauD, cmp: '>',
+        text: `Joint 5-channel residual is improbable (largest contributor: ${NAME[top].toLowerCase()}): D² ${D2[t].toFixed(1)} > ${tauD === CHI2_5_999 ? 'χ²₅,₀.₉₉₉' : 'validated limit'} ${tauD}` }); }
+  }
+
+  // storm-preservation gate: heavy rain + saturated air + falling pressure (or cooling) = real weather
+  const storm = t => { const R = X[3][t], Hh = X[1][t], P = X[2], T = X[0];
+    if (t < 3 || R == null || Hh == null || R < 10 || Hh < 85) return false;
+    return (P[t] != null && P[t-3] != null && P[t] < P[t-3]) || (T[t] != null && T[t-3] != null && T[t] < T[t-3]); };
+  const WEATHER = new Set(['TEMPORAL_SPIKE','MULTIVARIATE_INCONSISTENCY','CALIBRATION_DRIFT']);
+  const flags = F.filter(f => !(storm(f.t) && WEATHER.has(f.reason)));
+  for (let t = 0; t < n; t++) if (storm(t)) flags.push({ t, det: t, c: 3, ts: rows[t].ts, reason: 'VALID_EXTREME_WEATHER', val: X[3][t], exp: exp[3][t], sym: 'R', score: X[3][t], thr: 10, cmp: '≥',
+    text: `Rain ${fv(X[3][t],3)} with humidity ${fv(X[1][t],1)} and pressure ${X[2][t] != null && X[2][t-3] != null ? sg(X[2][t]-X[2][t-3]) + ' hPa/3h' : 'n/a'}: consistent convective storm, preserved, not a fault` });
+  flags.sort((a,b) => a.t - b.t || a.c - b.c);
+  const byRow = Array.from({length:n}, () => []); flags.forEach(f => byRow[f.t].push(f));
+  return { flags, byRow, exp, E, med, mad, imputed, nCal, nVal, thr: { tauM, hC, tauD } };
+}
+
+// classical baseline: static range + step change + rolling 24h mean/std 3σ on raw values
+function baseline(rows){
+  const n = rows.length, F = [], seen = new Set();
+  const add = (t,c,reason,o) => { const k = `${t}|${c}|${reason}`; if (seen.has(k)) return; seen.add(k); F.push({ t, c, reason, det: t, ts: rows[t].ts, ...o }); };
+  for (let t = 0; t < n; t++){
+    if (rows[t].x.some(v => v == null)) add(t, -1, 'COMMUNICATION_LOSS', { sym: 'gap', score: 1, thr: 0, cmp: '>', text: 'Missing value' });
+    rows[t].x.forEach((v,i) => { if (v == null) return; const [lo,hi] = BOUNDS[i];
+      if (v < lo || v > hi) add(t, i, 'OUT_OF_RANGE', { val: v, sym: 'x', score: v, thr: `[${lo}, ${hi}]`, cmp: '∉', text: 'Outside static range' });
+      const p = t ? rows[t-1].x[i] : null;
+      if (p != null && Math.abs(v - p) > STEP_MAX[i]) add(t, i, 'STEP_CHANGE', { val: v, sym: 'Δx', score: Math.abs(v-p), thr: STEP_MAX[i], cmp: '>', text: 'Step change' });
+      const w = rows.slice(Math.max(0,t-24), t).map(r => r.x[i]).filter(v => v != null);
+      if (w.length >= 12){ const mu = w.reduce((a,b) => a+b) / w.length, sd = Math.sqrt(w.reduce((a,b) => a + (b-mu)**2, 0) / (w.length-1));
+        if (sd > 0 && Math.abs(v - mu) / sd > 3) add(t, i, 'SIGMA_3', { val: v, exp: mu, sym: 'Z', score: Math.abs(v-mu)/sd, thr: 3, cmp: '>', text: 'Rolling 3σ exceedance' }); }
+    });
+  }
+  const byRow = Array.from({length:n}, () => []); F.forEach(f => byRow[f.t].push(f));
+  return { flags: F, byRow };
+}
+
+// fault injection into the test window (last 20%), ground truth kept per row
+function inject(rows, seed = SEED){
+  const rnd = mulberry32(seed), n = rows.length, t0 = Math.floor(n * .8);
+  const out = rows.map(r => ({ ts: r.ts, x: r.x.slice() })), truth = Array(n).fill(null), used = new Uint8Array(n), events = [];
+  const place = (type, len, okHour) => {
+    for (let k = 0; k < 20000; k++){
+      const s = t0 + Math.floor(rnd() * (n - t0 - len)); if (s < t0) break;
+      if (!okHour(hourOf(out[s].ts)) || out[s].x[0] == null) continue;
+      let free = true; for (let j = s-2; j < s+len+2; j++) if (j >= 0 && j < n && used[j]) free = false;
+      if (!free) continue;
+      for (let j = s; j < s+len; j++){ used[j] = 1; truth[j] = type; }
+      events.push({ type, s, len }); return s;
+    }
+    throw Error(`Test window (${n - t0} h) too short to place all injected faults`);
+  };
+  const any = () => true;
+  let s = place('CALIBRATION_DRIFT', 40, any);
+  for (let j = 0; j < 40; j++) if (out[s+j].x[0] != null) out[s+j].x[0] += 0.08 * (j+1);
+  for (let k = 0; k < 2; k++){ const len = 6 + Math.floor(rnd() * 3); s = place('FLATLINE_FAULT', len, h => h >= 8 && h <= 12);
+    const v = out[s].x[0]; for (let j = 0; j < len; j++) out[s+j].x[0] = v; }
+  for (let k = 0; k < 3; k++){ s = place('TEMPORAL_SPIKE', 1, h => h >= 22 || h <= 4); out[s].x[0] += 12 + 4 * rnd(); }
+  for (let k = 0; k < 2; k++){ s = place('MULTIVARIATE_INCONSISTENCY', 1, any); out[s].x[3] = 38; out[s].x[1] = 28; }
+  s = place('COMMUNICATION_LOSS', 5, any); for (let j = 0; j < 5; j++) out[s+j].x = [null,null,null,null,null];
+  return { rows: out, truth, events, t0 };
+}
+
+function evaluate(byRow, truth, events, from, excl = new Set()){
+  let tp = 0, fp = 0, fn = 0, tn = 0;
+  for (let t = from; t < truth.length; t++){ if (excl.has(t)) continue;
+    const p = byRow[t].some(isFault), y = !!truth[t]; if (p && y) tp++; else if (p) fp++; else if (y) fn++; else tn++; }
+  const P = tp / (tp + fp), R = tp / (tp + fn);
+  const ds = events.filter(e => e.type === 'FLATLINE_FAULT' || e.type === 'CALIBRATION_DRIFT').map(e => {
+    let d = Infinity; for (let t = e.s; t < e.s + e.len; t++) for (const f of byRow[t]) if (isFault(f)) d = Math.min(d, f.det - e.s); return d; });
+  const hit = ds.filter(isFinite);
+  return { tp, fp, fn, tn, P, R, F1: 2*P*R / (P+R), FPR: fp / (fp + tn), delay: hit.length ? hit.reduce((a,b) => a+b) / hit.length : NaN, hit: hit.length, of: ds.length };
+}
+
+function runInjected(rows){
+  const I = inject(rows), res = detect(I.rows), base = baseline(I.rows);
+  const metrics = { ours: evaluate(res.byRow, I.truth, I.events, I.t0), base: evaluate(base.byRow, I.truth, I.events, I.t0), drop: [] };
+  for (const p of [5,10,20]){
+    const rnd = mulberry32(SEED + p), cand = []; for (let t = I.t0; t < rows.length; t++) if (!I.truth[t]) cand.push(t);
+    for (let i = cand.length - 1; i > 0; i--){ const j = Math.floor(rnd() * (i+1)); [cand[i], cand[j]] = [cand[j], cand[i]]; }
+    const drop = new Set(cand.slice(0, Math.round(p / 100 * (rows.length - I.t0))));
+    const R2 = I.rows.map((r,t) => drop.has(t) ? { ts: r.ts, x: [null,null,null,null,null] } : r);
+    metrics.drop.push({ p, ours: evaluate(detect(R2).byRow, I.truth, I.events, I.t0, drop).F1, base: evaluate(baseline(R2).byRow, I.truth, I.events, I.t0, drop).F1 });
+  }
+  return { ...I, res, base, metrics };
+}
+</script>
+
+<script>
+const STATIONS = [
+  { name: 'Bengaluru Central', lat: 12.9716, lon: 77.5946 },
+  { name: 'Whitefield', lat: 12.9698, lon: 77.7500 },
+  { name: 'Yelahanka', lat: 13.1007, lon: 77.5963 },
+  { name: 'Electronic City', lat: 12.8452, lon: 77.6602 },
+];
+const LEVEL_COL = { Healthy: '#34D399', Suspicious: '#F59E0B', Faulty: '#FB7185' };
+const COL = f => !isFault(f) ? '#34D399' : f.reason === 'CALIBRATION_DRIFT' ? '#F59E0B' : '#FB7185';
+const ICON = { TEMPORAL_SPIKE: '⚡', FLATLINE_FAULT: '▬', CALIBRATION_DRIFT: '↗', MULTIVARIATE_INCONSISTENCY: '⊗', OUT_OF_RANGE: '⚠', COMMUNICATION_LOSS: '⌁', VALID_EXTREME_WEATHER: '☂' };
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c]));
+const S = { data: null, inject: false, ch: 0, sel: 0, win: 0, filter: null, st: 0, health: {} };
+const cur = () => S.inject && S.data.inj.res ? S.data.inj : S.data.real;
+
+const fetchStation = async st => { const r = await fetch(OM_URL(st.lat, st.lon)); if (!r.ok) throw Error(`Open-Meteo HTTP ${r.status}`); return toGrid(parseOpenMeteo(await r.json())); };
+function health(rows, res){
+  const a = Math.max(0, rows.length - 24); let k = 0; for (let t = a; t < rows.length; t++) if (res.byRow[t].some(isFault)) k++;
+  const rate = k / (rows.length - a) * 100;
+  return { rate, level: rate < 1 ? 'Healthy' : rate < 5 ? 'Suspicious' : 'Faulty' };
+}
+const fScore = f => `${f.sym} = ${typeof f.score === 'number' ? (f.sym === 's²' ? f.score.toExponential(1) : f.score.toFixed(2)) : f.score}${f.unit ? f.unit : ''} ${f.cmp} ${f.thr}`;
+const fObs = f => f.c >= 0 ? fv(f.val, f.c) : f.valC != null ? `${CH[f.valC]} ${fv(f.val, f.valC)}` : '—';
+const fExp = f => f.c >= 0 ? fv(f.exp, f.c) : f.valC != null ? fv(f.exp, f.valC) : '—';
+const chName = f => f.c >= 0 ? CH[f.c] : f.reason === 'COMMUNICATION_LOSS' ? 'ALL' : 'T·H·P·R·W';
+
+function load(rows, name, sub){
+  const real = { rows, res: detect(rows) };
+  let inj; try { inj = runInjected(rows); } catch (e) { inj = { error: e.message }; }
+  S.data = { name, sub, real, inj }; S.sel = rows.length - 1; S.win = Math.max(0, rows.length - 168);
+  if (S.st >= 0) S.health[S.st] = health(rows, real.res).level;
+  $('#err').hidden = true;
+  console.log(`[${name}] ${rows.length} hourly rows, ${real.res.flags.length} flags (real data)`);
+  console.table(real.res.flags.map(f => ({ time: fmtTime(f.ts), ch: chName(f), observed: fObs(f), expected: fExp(f), score: fScore(f), reason: f.reason, why: f.text })));
+  if (inj.metrics) console.table({ Baseline: inj.metrics.base, Ours: inj.metrics.ours });
+  render();
+}
+
+async function selectStation(k){
+  S.st = k; $('#stName').textContent = STATIONS[k].name; $('#loc').textContent = `Fetching ${STATIONS[k].name}…`;
+  try { load(await fetchStation(STATIONS[k]), STATIONS[k].name, 'Karnataka'); } catch (e) { showError(e); }
+}
+function showError(e){
+  S.data = null;
+  $('#loc').textContent = 'Open-Meteo unreachable';
+  $('#big').textContent = '—'; $('#hi').textContent = 'H —'; $('#lo').textContent = 'L —'; $('#when').textContent = '';
+  $('#verdict').innerHTML = '<span>No data loaded</span><span class="d">nothing to certify</span>';
+  $('#err').hidden = false;
+  $('#err').innerHTML = `Could not fetch real data: ${esc(e.message)}.<br>No fallback numbers are shown. Upload a station CSV (columns <span class="mono">time,T,H,P,R,W</span>) to run the same pipeline.<br><label class="pill">Upload CSV<input type="file" accept=".csv" hidden onchange="onCSV(event)"></label>`;
+  ['#recent','#metrics','#wave','#chp'].forEach(s => $(s).innerHTML = '');
+  $('#rate').textContent = '—'; $('#hlabel').textContent = '—';
+}
+async function onCSV(e){
+  const f = e.target.files[0]; if (!f) return;
+  try { S.st = -1; $('#stName').textContent = f.name; load(toGrid(parseCSV(await f.text())), f.name.replace(/\.csv$/i, ''), 'uploaded CSV'); paintPins(); }
+  catch (err) { alert('CSV error: ' + err.message); }
+  e.target.value = '';
+}
+
+function render(){
+  if (!S.data) return;
+  const { rows, res } = cur(), n = rows.length; S.sel = Math.max(0, Math.min(n-1, S.sel));
+  // top bar
+  const last = new Date(rows[n-1].ts);
+  $('#loc').innerHTML = `${esc(S.data.name)}, ${esc(S.data.sub)} (${WD[last.getUTCDay()]}, ${last.getUTCDate()} ${MO[last.getUTCMonth()]})` + (S.inject && S.data.inj.res ? ' <span class="chip inj">INJECTED TEST DATA</span>' : '');
+  $('#stName').textContent = S.data.name;
+  // health gauge
+  const h = health(rows, res), g = $('#garc'), L = g.getTotalLength();
+  const f = h.rate < 1 ? h.rate / 1 * .33 : h.rate < 5 ? .33 + (h.rate - 1) / 4 * .33 : Math.min(1, .66 + (h.rate - 5) / 15 * .34);
+  const pt = g.getPointAtLength(L * Math.max(.02, f));
+  $('#gdot').setAttribute('cx', pt.x); $('#gdot').setAttribute('cy', pt.y);
+  $('#hlabel').style.left = Math.min(80, pt.x / 240 * 100) + '%'; $('#hlabel').style.top = (pt.y / 110 * 100) + '%';
+  $('#hlabel').textContent = h.level; $('#rate').textContent = `↑ ${h.rate.toFixed(1)}% flagged`;
+  // hero
+  const t = S.sel, v = rows[t].x[S.ch], day = new Date(rows[t].ts).toISOString().slice(0,10);
+  const big = v == null ? '—' : S.ch === 0 ? `${Math.round(v)}°` : S.ch === 1 ? `${Math.round(v)}<small>%</small>` : S.ch === 2 ? `${Math.round(v)}<small> hPa</small>` : `${v.toFixed(1)}<small> ${UNIT[S.ch]}</small>`;
+  $('#big').innerHTML = big;
+  const dv = rows.filter(r => new Date(r.ts).toISOString().slice(0,10) === day).map(r => r.x[S.ch]).filter(x => x != null);
+  $('#hi').textContent = `H ${dv.length ? fv(Math.max(...dv), S.ch) : '—'}`; $('#lo').textContent = `L ${dv.length ? fv(Math.min(...dv), S.ch) : '—'}`;
+  $('#when').textContent = `${fmtTime(rows[t].ts)} IST · ${NAME[S.ch]}${res.imputed[S.ch][t] ? ' · gap ≤3h (residual interpolated)' : ''}`;
+  const [l1, l2] = verdict(res.byRow[t]);
+  $('#verdict').innerHTML = `<span>${l1}</span><span class="d">${l2}</span>`;
+  $('#chp').innerHTML = CH.map((c,i) => `<button class="${i === S.ch ? 'on' : ''}" data-ch="${i}" title="${NAME[i]}">${c}</button>`).join('');
+  renderRecent(rows, res); renderMetrics(); renderWave(); if ($('#drawer').classList.contains('on')) renderLog(); paintPins();
+}
+
+function verdict(fl){
+  if (!fl.length) return ['Sensor healthy', 'all 5 channels trusted'];
+  const f = fl.find(isFault); if (!f) return ['Genuine storm', 'not a fault · data preserved'];
+  const nm = f.c >= 0 ? NAME[f.c] : '', more = fl.length > 1 ? ` · +${fl.length - 1} more` : '';
+  const m = { TEMPORAL_SPIKE: [`${nm} spike`, 'sensor fault'], FLATLINE_FAULT: [`${nm} flatline`, 'sensor stuck'], CALIBRATION_DRIFT: [`${nm} drifting`, 'calibration fault'],
+    MULTIVARIATE_INCONSISTENCY: ['Sensors disagree', 'physically inconsistent'], OUT_OF_RANGE: [`${nm} out of range`, 'impossible reading'], COMMUNICATION_LOSS: ['Signal lost', 'communication gap > 3h'] }[f.reason];
+  return [m[0], m[1] + more];
+}
+
+function renderRecent(rows, res){
+  const n = rows.length, out = [], seenT = new Set();
+  for (let i = res.flags.length - 1; i >= 0 && out.length < 2; i--){ const f = res.flags[i]; if (f.t < n - 72) break; if (!seenT.has(f.t)){ seenT.add(f.t); out.push(f); } }
+  $('#recent').innerHTML = out.length ? out.map(f => {
+    const vi = f.c >= 0 ? f.c : f.valC, val = f.reason === 'COMMUNICATION_LOSS' ? `${f.score}h` : vi != null && f.val != null ? fv(f.val, vi).replace(' ', '<small style="font-size:13px"> ') + '</small>' : '—';
+    return `<div class="fc glass" data-t="${f.t}"><div class="ic" style="background:${COL(f)}22;color:${COL(f)}">${ICON[f.reason]}</div><div class="v">${val}</div><div class="r" style="color:${COL(f)}">${f.reason}</div><div class="t">${fmtTime(f.ts)}</div></div>`; }).join('')
+    : `<div class="fc glass solo"><div class="ic" style="background:#34D39922;color:#34D399">✓</div><div class="v" style="font-size:20px">No faults in last 72h</div><div class="t">all ${Math.min(72, n)} hourly readings certified</div></div>`;
+}
+
+function renderMetrics(){
+  const el = $('#metrics'), I = S.data.inj;
+  if (!S.inject){ el.innerHTML = `<div class="muted">Turn on <b style="color:var(--ink);font-weight:500">Inject Faults</b> to measure detection. Without ground-truth labels, precision / recall are <span class="mono">—</span>.</div>`; return; }
+  if (I.error){ el.innerHTML = `<div class="muted">Metrics <span class="mono">—</span>: ${esc(I.error)}</div>`; return; }
+  const { ours, base, drop } = I.metrics, nd = x => isNaN(x) ? '—' : x.toFixed(3), pc = x => isNaN(x) ? '—' : (x * 100).toFixed(1) + '%';
+  const dl = m => m.hit ? `${m.delay.toFixed(1)}h <span class="muted">${m.hit}/${m.of}</span>` : `missed <span class="muted">0/${m.of}</span>`;
+  const row = (k, b, o, better) => `<tr><td>${k}</td><td>${b}</td><td class="${better ? 'win' : ''}">${o}</td></tr>`;
+  const gt = (a,b,lower) => !isNaN(a) && (isNaN(b) || (lower ? a < b : a > b));
+  const lab = I.truth.filter(Boolean).length;
+  el.innerHTML = `<table><tr><th>Test window</th><th>Baseline</th><th>Ours</th></tr>
+    ${row('Precision', nd(base.P), nd(ours.P), gt(ours.P, base.P))}
+    ${row('Recall', nd(base.R), nd(ours.R), gt(ours.R, base.R))}
+    ${row('F1', nd(base.F1), nd(ours.F1), gt(ours.F1, base.F1))}
+    ${row('FPR', pc(base.FPR), pc(ours.FPR), gt(ours.FPR, base.FPR, true))}
+    ${row('Delay (flat+drift)', dl(base), dl(ours), ours.hit > base.hit || (ours.hit === base.hit && gt(ours.delay, base.delay, true)))}
+    ${drop.map(d => row(`F1 · ${d.p}% dropout`, nd(d.base), nd(d.ours), gt(d.ours, d.base))).join('')}</table>
+    <div class="cap">${rowsCount()} h test window · ${I.events.length} injected faults, ${lab} labelled hours · TP/FP ours ${ours.tp}/${ours.fp}, baseline ${base.tp}/${base.fp}<br>
+    Thresholds raised on validation split to FPR ≤ 1%: <span class="mono">τ_M ${thrTxt(I.res.thr.tauM)} · h ${thrTxt(I.res.thr.hC)} · D² ${I.res.thr.tauD}</span></div>`;
+}
+const rowsCount = () => S.data.inj.rows.length - S.data.inj.t0;
+const thrTxt = a => a.map((v,i) => v == null ? '' : `${CH[i]}${v}`).filter(Boolean).join(' ');
+
+function smooth(pts){   // Catmull-Rom -> cubic Bézier, breaks at nulls
+  let d = '', seg = [];
+  const r = v => v.toFixed(1), flush = () => {
+    if (seg.length === 1) d += `M${r(seg[0][0])},${r(seg[0][1])}h.1`;
+    else if (seg.length > 1){ d += `M${r(seg[0][0])},${r(seg[0][1])}`;
+      for (let i = 0; i < seg.length - 1; i++){ const p0 = seg[i-1] || seg[i], p1 = seg[i], p2 = seg[i+1], p3 = seg[i+2] || p2;
+        d += `C${r(p1[0] + (p2[0]-p0[0])/6)},${r(p1[1] + (p2[1]-p0[1])/6)} ${r(p2[0] - (p3[0]-p1[0])/6)},${r(p2[1] - (p3[1]-p1[1])/6)} ${r(p2[0])},${r(p2[1])}`; } }
+    seg = []; };
+  pts.forEach(p => p ? seg.push(p) : flush()); flush(); return d;
+}
+
+function renderWave(){
+  const { rows, res } = cur(), n = rows.length, N = Math.min(168, n), svg = $('#wave');
+  if (S.sel < S.win || S.sel >= S.win + N) S.win = Math.max(0, Math.min(n - N, S.sel - (N >> 1)));
+  const W = svg.clientWidth || 900, H = 200, i0 = S.win, ch = S.ch;
+  const idx = Array.from({length:N}, (_,k) => i0 + k), vals = idx.map(t => rows[t].x[ch]), exps = idx.map(t => res.exp[ch][t]);
+  const all = [...vals, ...exps].filter(v => v != null); let lo = Math.min(...all), hi = Math.max(...all);
+  if (!(hi - lo > 1e-9)){ lo -= 1; hi += 1; } const pad = (hi - lo) * .1; lo -= pad; hi += pad;
+  const X = k => 18 + k * (W - 36) / Math.max(1, N - 1), Y = v => 44 + (1 - (v - lo) / (hi - lo)) * 96;
+  let s = '';
+  // day groups
+  const groups = []; idx.forEach((t,k) => { const d = new Date(rows[t].ts).toISOString().slice(0,10); if (!groups.length || groups.at(-1).d !== d) groups.push({ d, a: k, b: k }); else groups.at(-1).b = k; });
+  const selDay = new Date(rows[S.sel].ts).toISOString().slice(0,10);
+  groups.forEach((g,gi) => { if (gi) s += `<line x1="${X(g.a) - .5 * (W-36)/(N-1)}" x2="${X(g.a) - .5 * (W-36)/(N-1)}" y1="30" y2="150" stroke="rgba(255,255,255,.05)"/>`;
+    if (g.b - g.a < 5) return; const cx = (X(g.a) + X(g.b)) / 2, vv = vals.slice(g.a, g.b + 1).filter(v => v != null);
+    const wd = WD[new Date(g.d + 'T00:00Z').getUTCDay()];
+    s += `<text class="day ${g.d === selDay ? 'on' : ''}" x="${cx}" y="20" text-anchor="middle">${W < 700 ? wd.slice(0,3) : wd}</text>`;
+    if (vv.length) s += `<text class="mean" x="${cx}" y="186" text-anchor="middle">${(vv.reduce((a,b) => a+b) / vv.length).toFixed(ch === 1 || ch === 2 ? 0 : 1).replace(/\.0$/, '')}${ch === 0 ? '°' : `<tspan font-size="13" fill="#8A99AD"> ${UNIT[ch]}</tspan>`}</text>`; });
+  s += `<path class="expc" d="${smooth(exps.map((v,k) => v == null ? null : [X(k), Y(v)]))}"/>`;
+  s += `<path class="curve" d="${smooth(vals.map((v,k) => v == null ? null : [X(k), Y(v)]))}"/>`;
+  // selected hour
+  const ks = S.sel - i0, sx = X(ks), sv = vals[ks] ?? exps[ks];
+  s += `<line x1="${sx}" x2="${sx}" y1="28" y2="152" stroke="rgba(255,255,255,.55)" stroke-dasharray="3 4"/>`;
+  if (sv != null) s += `<circle cx="${sx}" cy="${Y(sv)}" r="15" fill="rgba(255,255,255,.12)"/><circle cx="${sx}" cy="${Y(sv)}" r="7" fill="#fff" style="filter:drop-shadow(0 0 8px #fff)"/>`;
+  s += `<rect x="0" y="0" width="${W}" height="${H}" fill="transparent" id="hit"/>`;
+  // flag dots (on top of hit layer so they get hover)
+  idx.forEach((t,k) => { const fl = res.byRow[t]; if (!fl.length) return;
+    const mine = fl.filter(f => f.c === ch || f.c === -1), f = mine.find(f => isFault(f) && f.reason !== 'CALIBRATION_DRIFT') || mine.find(isFault) || mine[0];
+    const y = vals[k] ?? exps[k];
+    if (f && y != null) s += `<circle class="fd" data-t="${t}" cx="${X(k)}" cy="${Y(y)}" r="5" fill="${COL(f)}"/>`;
+    else { const o = fl.find(isFault) || fl[0]; s += `<circle class="fd" data-t="${t}" cx="${X(k)}" cy="150" r="3" fill="${COL(o)}" opacity=".7"/>`; } });
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`); svg.innerHTML = s;
+}
+
+function cert(f){
+  return `<div class="c"><b style="color:${COL(f)}">${f.reason}</b> <span class="muted">· ${chName(f)} · ${fmtTime(f.ts)}</span>
+    <div style="margin-top:4px">Observed <b>${fObs(f)}</b> · expected <b>${fExp(f)}</b></div>
+    <div class="mono" style="margin-top:2px">${fScore(f)}${f.det !== f.t ? ` · decided ${fmtTime(rows_ts(f.det))}` : ''}</div>
+    <div style="margin-top:4px;color:var(--ink)">${esc(f.text)}</div></div>`;
+}
+const rows_ts = t => cur().rows[t].ts;
+
+function renderLog(){
+  const { res } = cur(), counts = {};
+  res.flags.forEach(f => counts[f.reason] = (counts[f.reason] || 0) + 1);
+  $('#chips').innerHTML = `<button class="${!S.filter ? 'on' : ''}" data-f="">ALL ${res.flags.length}</button>` + Object.entries(counts).map(([k,c]) => `<button class="${S.filter === k ? 'on' : ''}" data-f="${k}">${k} ${c}</button>`).join('');
+  const list = res.flags.filter(f => !S.filter || f.reason === S.filter).slice().reverse();
+  $('#logBody').innerHTML = list.length ? list.map(f => `<tr data-t="${f.t}"><td class="m">${fmtTime(f.ts)}</td><td class="m">${chName(f)}</td><td class="m">${fObs(f)}</td><td class="m">${fExp(f)}</td><td class="m">${fScore(f)}</td><td class="m" style="color:${COL(f)}">${f.reason}</td><td>${esc(f.text)}</td></tr>`).join('')
+    : `<tr><td colspan="7" class="muted">No flags: every reading passed all three stages.</td></tr>`;
+}
+
+function downloadCSV(){
+  const { rows, res } = cur(), q = v => /[",\n]/.test(v) ? `"${String(v).replace(/"/g, '""')}"` : v;
+  const lines = ['time,T,H,P,R,W,QC_FLAG,REASON,CHANNEL,SCORE,THRESHOLD,EXPLANATION'];
+  rows.forEach((r,t) => { const fl = res.byRow[t], ts = new Date(r.ts).toISOString().slice(0,16);
+    const qc = fl.some(isFault) ? 'FAULT' : fl.length ? 'VALID_EXTREME_WEATHER' : 'OK';
+    lines.push([ts, ...r.x.map(v => v ?? ''), qc, fl.map(f => f.reason).join(' | '), fl.map(chName).join(' | '), fl.map(f => typeof f.score === 'number' ? +f.score.toPrecision(4) : f.score).join(' | '), fl.map(f => f.thr).join(' | '), fl.map(f => f.text).join(' | ')].map(q).join(',')); });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([lines.join('\n')], { type: 'text/csv' }));
+  a.download = `qc_report_${S.data.name.replace(/\W+/g, '_')}${S.inject ? '_INJECTED' : ''}_${new Date(rows.at(-1).ts).toISOString().slice(0,10)}.csv`;
+  a.click(); URL.revokeObjectURL(a.href);
+}
+
+// map
+let pins = [];
+function initMap(){
+  if (!window.L){ $('#map').textContent = 'Map unavailable (Leaflet failed to load)'; return; }
+  const map = L.map('map', { zoomControl: false, attributionControl: false, scrollWheelZoom: false });
+  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
+  pins = STATIONS.map((st,k) => L.circleMarker([st.lat, st.lon], { radius: 7, weight: 2, color: '#fff', fillColor: '#8A99AD', fillOpacity: 1 }).addTo(map).bindTooltip(st.name).on('click', () => selectStation(k)));
+  map.fitBounds(L.latLngBounds(STATIONS.map(s => [s.lat, s.lon])), { padding: [30, 30] });
+}
+function paintPins(){ pins.forEach((p,k) => { p.setStyle({ fillColor: LEVEL_COL[S.health[k]] || '#8A99AD', weight: k === S.st ? 3 : 1.5 }); p.setRadius(k === S.st ? 9 : 6); }); }
+
+// events
+$('#chp').onclick = e => { const c = e.target.dataset.ch; if (c != null){ S.ch = +c; render(); } };
+$('#inj').onchange = e => { S.inject = e.target.checked; render(); };
+$('#recent').onclick = e => { const c = e.target.closest('[data-t]'); if (c){ S.sel = +c.dataset.t; render(); } };
+$('#openLog').onclick = $('#seeAll').onclick = () => { if (!S.data) return; $('#drawer').classList.add('on'); renderLog(); };
+$('#closeLog').onclick = () => $('#drawer').classList.remove('on');
+$('#chips').onclick = e => { const f = e.target.dataset.f; if (f != null){ S.filter = f || null; renderLog(); } };
+$('#logBody').onclick = e => { const r = e.target.closest('tr[data-t]'); if (r){ S.sel = +r.dataset.t; render(); } };
+$('#dl').onclick = () => S.data && downloadCSV();
+$('#csv').onchange = onCSV;
+$('#searchBtn').onclick = () => { $('#pop').classList.toggle('on'); if (S.data) $('#jump').value = new Date(cur().rows[S.sel].ts).toISOString().slice(0,16); };
+$('#go').onclick = () => { if (!S.data) return; const ts = Date.parse($('#jump').value + 'Z'), rows = cur().rows;
+  if (!isNaN(ts)){ S.sel = Math.max(0, Math.min(rows.length - 1, Math.round((ts - rows[0].ts) / 3600e3))); render(); } $('#pop').classList.remove('on'); };
+const wave = $('#wave');
+wave.onclick = e => { if (!S.data) return; const b = wave.getBoundingClientRect(), N = Math.min(168, cur().rows.length);
+  const k = Math.round((e.clientX - b.left - 18) / (b.width - 36) * (N - 1)); S.sel = S.win + Math.max(0, Math.min(N - 1, k)); render(); };
+wave.onmouseover = e => { const t = e.target.dataset?.t; if (t == null) return; const tip = $('#tip');
+  tip.innerHTML = cur().res.byRow[+t].map(cert).join(''); tip.style.display = 'block';
+  const r = tip.getBoundingClientRect(); tip.style.left = Math.min(innerWidth - r.width - 10, e.clientX + 14) + 'px'; tip.style.top = Math.max(10, e.clientY - r.height - 14) + 'px'; };
+wave.onmouseout = e => { if (e.target.dataset?.t != null) $('#tip').style.display = 'none'; };
+addEventListener('keydown', e => {
+  if (!S.data || e.target.tagName === 'INPUT') return;
+  if (e.key === 'ArrowLeft' || e.key === 'ArrowRight'){ S.sel += e.key === 'ArrowLeft' ? -1 : 1; render(); e.preventDefault(); }
+  if (e.key === 'Escape') $('#drawer').classList.remove('on');
+});
+addEventListener('resize', () => S.data && renderWave());
+
+initMap();
+$('#stName').textContent = STATIONS[0].name;
+STATIONS.forEach((st,k) => fetchStation(st)
+  .then(rows => { S.health[k] = health(rows, detect(rows)).level; if (k === 0 && !S.data) load(rows, st.name, 'Karnataka'); else paintPins(); })
+  .catch(e => { if (k === 0) showError(e); }));
+</script>
+</body>
+</html>
