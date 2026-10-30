@@ -1,5 +1,5 @@
 // Builds bengaluru_43295_2025-09-10.csv from Meteostat hourly data for IMD Bangalore (WMO 43295, 12.97N 77.58E, 920 m).
-// Meteostat columns: date,hour,temp,dwpt,rhum,prcp,snow,wdir,wspd(km/h),wpgt,pres(sea-level hPa),tsun,coco
+// Meteostat columns (UTC): date,hour,temp,dwpt,rhum,prcp,snow,wdir,wspd(km/h),wpgt,pres(sea-level hPa),tsun,coco
 // usage: node samples/make_sample.mjs > samples/bengaluru_43295_2025-09-10.csv
 import { gunzipSync } from 'node:zlib';
 
@@ -14,6 +14,7 @@ for (const line of gunzipSync(buf).toString().split('\n')) {
   // sea-level -> station pressure (hypsometric, mean layer temperature T + 0.0065·Z/2)
   const P = slp != null && T != null ? slp * Math.exp(-Z / (29.27 * (T + 273.15 + 0.00325 * Z))) : null;
   const f = (v, d) => v == null ? '' : v.toFixed(d);
-  out.push([`${date}T${hour.padStart(2, '0')}:00`, f(T, 1), f(n(rhum), 0), f(P, 1), f(n(prcp), 1), f(w == null ? null : w / 3.6, 1)].join(','));
+  const ist = new Date(Date.parse(`${date}T${hour.padStart(2, '0')}:00Z`) + 19800e3).toISOString().slice(0, 16);   // Meteostat is UTC -> IST
+  out.push([ist, f(T, 1), f(n(rhum), 0), f(P, 1), f(n(prcp), 1), f(w == null ? null : w / 3.6, 1)].join(','));
 }
 console.log(out.join('\n'));

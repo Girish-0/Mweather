@@ -14,11 +14,11 @@ Data: Open-Meteo (CC BY 4.0). Map: © OpenStreetMap contributors.
 
 ## Sample CSV (real station data)
 
-[`samples/bengaluru_43295_2025-09-10.csv`](samples/bengaluru_43295_2025-09-10.csv): hourly readings from the IMD Bangalore observatory (WMO 43295, 12.97 N 77.58 E, 920 m), 1 Sep – 31 Oct 2025, 1,446 of 1,464 hours present. Upload it with **Upload CSV** on the prototype.
+[`samples/bengaluru_43295_2025-09-10.csv`](samples/bengaluru_43295_2025-09-10.csv): hourly readings from the IMD Bangalore observatory (WMO 43295, 12.97 N 77.58 E, 920 m), 1 Sep – 1 Nov 2025 IST, 1,446 of 1,464 hours present. Upload it with **Upload CSV** on the prototype.
 
 | Column | Unit | Source / conversion |
 |---|---|---|
-| `time` | IST, hourly | Meteostat date + hour |
+| `time` | IST (observations at hh:30 IST; the app snaps to the nearest hour) | Meteostat UTC date + hour, +5:30 |
 | `T` | °C | air temperature |
 | `H` | % | relative humidity |
 | `P` | hPa | station pressure, converted from Meteostat sea-level pressure (hypsometric, z = 920 m) |
